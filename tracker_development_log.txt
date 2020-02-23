@@ -1,0 +1,397 @@
+Tracker Development Log
+11/18/18
+
+tracker_r1.py 
+runs basic surveillance program from PyImageSearch tutorial
+copies files to my Dropbox  Apps/JeffPi
+
+tracker_r2.py
+Will delete file writing
+Will focus on just reporting x location of centroid of detection
+11/18
+	have a basic tracker running
+	uses simple moving average tracker
+	average = sample*alpha + (1-alpha)*average
+The contour motion detector is very jumpy. But only inputting the largest contour may work OK.
+Can this still work with the peoplecounter tracker?  Or is it too jumpy?
+
+tracker_r3.py
+11/19  added servo slaved to the tracked point
+
+tracker_r4.py
+11/19  experimenting with better moving average to reduce the noise in the motion
+Something bad happened, and the detector is firing constantly. Something with the light level?
+
+tracker r5 and r6
+iterations on r4
+r5 has time stamps to measure detection duration = 2.4 sec
+
+tracker_r07.py
+11/20
+experimenting with using the real object detector from the counting program, merging in with the live video of the surveillance program
+mixed results.
+detection is faster
+tracking is intermittant.  large motion will lose track
+change to pigpio for hw PWM
+getting 5.8 fps, with 40-50% cpu load
+
+tracker_r08.py
+going back to the network tracker
+shrunk the input video to 320x240
+shrunk the processed video to 100
+note: min area not used by the net tracker
+detection times down to 0.25 sec when scaling the image down to 100 wide
+used pigpio for hw PWM.
+TODO: need to set up pigpiod in the autorun
+After tweaking the scaling on 11/22
+  FPS 3.0, using 320x240, camera FPS=16 & proc width of 200, cpu lqoad alternates between 12 and 38%
+
+tracker_r09.py
+modify tracker_08 using threaded video fetching 
+https://www.pyimagesearch.com/2015/12/28/increasing-raspberry-pi-fps-with-python-and-opencv/
+framerate went from 2.5 fps to 7-8 fps
+cpu now at 50-60% (and temp at 61 deg!)
+
+tracker_r10.py
+11/23/18
+Experiment with putting cv2.imshow in a separate thread
+succeeded, but this actually slowed down the fps.
+
+tracker_r11.py
+going back to r09, and experiment with putting detection in a separate thread
+Succeeded.  But no significant FPS increase.
+Detection times still on the order of 0.8 sec
+The libraries must already be multithreaded?
+But I still see a pause when it is detecting
+11/15  mangled this up quite a bit
+got the detector thread working and passing back a rect, but misunderstood how the demo program managed the tracker.  It needs to be set up in the same thread as the centroid tracker, I think.
+
+tracker_r12.py
+success
+runs at 20+ fps
+centrod tracker does work with person detector
+but, person detector is not consistently throwing detections, even if processing width =250
+There is good repeatabilty using 640x480 and proc width of 500 but teh detection time is 4-5 sec
+
+tracker_r13.py
+replacing net with HOG.
+saved old detectorThreadClass as r12
+added self.hog and self.pick to the class, and updated initialization
+
+tracer_r14.py  11/30
+adding a bunch of features from the fisheye calibration tests
+hardcoded conf.json as the config file
+added frame name definition to put it in the upper left corner.
+added a 180flip config param and an if statement
+
+tracer_r15.py  11/30
+adding undistort using conventional calibration
+everything worked, but HOG detections were not any more accurate.
+Starting from 800x600, and proc width of 400
+FPS = 3.8
+Net time= 2 to 6 sec
+camera correction taking .14 to .19 sec per frame!!!
+
+tracker_r16.py 11/30
+going back to net detector from r12, instead of HOG
+Detections seem much  more repeatable with the undistorted image.  
+Using 800x600 input, clipped to 530 by undistortion
+proc width =500
+net times 5-6 sec
+CPU = 91%
+FPS = 2-3
+proc width =400   good tracking between detections
+consistent detections
+net time 3.3 sec
+cpu - 85%
+FPS = 2-3
+
+tracker_r17.py 12/1
+move the fisheye correction to a threaded class
+in correct.py
+Success.
+FPS up to 10 at 640x480, 8-9 at 800x600
+net time still at 2-5 sec
+still some fisheye distortion, but it is better.
+
+
+tracker_r18.py  12/8
+experiment with subtracting frames from the background.
+
+tracker_r19
+dead end.
+
+tracker_r20.py  12/16
+Resurrected tracker_r17 and DetectorThreadClass_R12.
+Put DetectorThreadClass back into the main file.
+
+tracker_r21.py  12/16
+Combine the motion detection of r18 with the net recognizer.
+Convert to gray, take the diff from the avg, and then send it to the net recognizer.
+
+tracker_22.py  12/18
+creating separate classes for DetectPerson and DetectMotion.
+Use DetectMotion to identify rectangles with motion, and pass only these rectangles to the person detector.
+did not finishs as of 12/24  have it set up with part of the strucutre.  still need to convert cnts to my own box structure, use that to launch a bunch of net processing on small images, and then add offset to get it back in frame coords
+
+tracker 23.pyp 12/24
+Go back to MotionDetector only/  no net detection
+experiment with fixing white level and exposure so autochanges to these parameters do not trigger a detection
+works ok.  is a bit intermittant with throwing the motion detection boxes.Not sure why.
+To use this, would have to add data to traker to identify the largest, or fastest moving objects.  maybe filetering out objects that are not moving.
+running with threshold =15, min area =4000, background alpha =.1
+setting detecti0n area threashold from 4000 to 2000 resluts in many false alarms
+slightly better reslults with threshold =20, alpha =0.01
+
+tracker_24.py 1/1/19
+simplify to just be the motion detector.  no tracker.
+Test to see if the latest version can consistently detect motion
+FPS of 9, single threaded I think
+Contour detection is pretty consistent with threshold = 20 and alpha =0.05
+But rectangle area threasholding is not.
+
+tracker_r25.py 1/1/19
+Try to combine neighboring or overlapping contours
+bleh.  giving up on this.  looks to be fairly complex
+
+tracker_r26.py  1/1/19
+back to r24.  play around with dialate to try to get small countours to erge into a big contour
+Iterations =5 seems to make a bigger, merged blob
+Also, I noticed that the disabling of auto exposure was not working.
+It turns out that by using PiVideoStream to thread the video capture, my code to disable the awb wasnt actually changing anything.
+Created JeffPiVideoStream in jeffpivideostream.py to allow me to edit the capture settings.  
+THIS IS THE BASELINE MOTION TRACKER 1/5/19
+
+tracker_r27.py 1/5/19
+Net detector version, based on editing r26
+	disable autoexposure
+	disable fisheye
+	recognizer only: do not include dlib tracker
+	did not include detectMultiscale to eliminate overlaps
+Detection time:
+	300 pixel proc width: 1.2 sec, but it usually misses the detection
+	400 pixel proc width: 2.17 sec, gets the main detection
+	500 pixel proc width: 3.10 sec. occassionally picks up other detections
+	640 proc width: 3.6 sec.  picks up chair detection
+Shutdown based on typing "q" is very long.
+
+tracker_r28.py  1/5/19
+HOG person detector, per PyImageSearch Pedestrian Detection OpenCV
+detection time: 
+	300 proc width: 0.3 sec, about the same as 400
+	400 proc width: .7 sec, intermittant detection on photo, OK on me
+	640 proc width: 1.74 sec, no detections?
+
+Notes from PC tests, 1/5/19
+640x480 webcam
+Did not need jeffpistream.py to multithread.  The PC seems to do this on its own
+trackerR27 with net detector, at 500 proc width runs at 0.09 sec (10 fps)
+trackerR28, HOG, at 500 proc width runs at 0.1 sec, or 9 FPS
+Good detections on each one.
+webcam may have more latency than picam.
+
+tracker_r29.py 1/5/19
+Implemented face recognizer on PC
+25 fps at 640 proc width
+
+tracker_r30.py 1/5/19
+Implemented the face racognizer on the RPi
+	500 proc width= .11, 8 fps
+	640 proc width = .14 sec, 6 fps
+
+tracker_r31.py 1/6/19
+YOLO recognizer
+35 to 37 sec to loop through the LayerOutputs.
+the rest of the processes were reasonably speedy
+no difference between 400 and 640 proc width
+cpu is at 89%, with 3 cores pegged
+Memory is 83% used
+Seems to lock up when I try to exit, need to reboot
+
+tracker_r31_pc.py
+Moved this to my PC test bed.  Runs at ~ 1.7FPS (0.6 sec proc time)
+
+tracker_r32.py 1/6/19
+Use the face recognizer from r30, and combine with the old dlib tracker
+Hope to seed the tracker with the fast face recognition, and track the faces across the screen.
+Will pull the tracker management code from r12.
+Works
+	800x600 6.6 FPS
+	640x660, 18 FPS, but does not detect faces that well
+Added 2nd detector for profile.
+Face detector works great.
+Tracking is not working quite right.  Not sure if I'm seeding it right with rects and trackers.  
+Final version is better.  Still seems to not include several detections in a track.
+2 FPS at 500 proc width
+
+tracker_r33.py 1/7
+Experiment with Mosse tracker, rather than dlib tracker.
+Using just the frontal face detector
+with skipframe =5, got to 15 FPS
+
+tracker_r34.py  1/7/19
+Cleanup of r32
+Face and profile detectors, with centroittttttttd tracker.
+Remove dlib tracker/skip frame
+clean out old detectors
+put face and profile detectors into their own threads
+remove autoexposure correction from jeffpivideostream
+final version had a bunch of test code to puzzle out rects structure conflicts
+
+PC version:
+added max suppression to consolodate detections
+ID location is jittery when profile and frontal detections alternate
+  profile box is always a little bigger than frontal, and offset a little
+
+640 x 480, Main thread running at 27 FPS	
+frontal detector running at .06 sec, occasional .4 sec
+profile detector running at .1, .5, .7 sec
+
+tracker_r35.py
+PC version
+added x velocity calculation
+front face cascade only.  jitter from profiles created large velocitys
+
+RPi versions
+Proc width 500
+  Main thread runs at 13 FPS
+  face cascade thread takes 0.2 sec
+Proc width 640
+  Main thread runs at 22 FPS ??? 
+  face cascade takes 0.35 sec
+  Confirm that disabling the resizing has that much of an impact
+CPU is at 87%  A;; 4 cores are very busy
+Temp at 59 deg
+Change to 800 x 600, proc width =800
+	FPS = 16
+	face cascade = 0.6 sec
+	detections work from reasonably far away, across the fisheye fox
+Back to 640 x 480
+	detections only work within 6 -8 feet
+	actually more consistent with IR lighing. perhaps I need more light
+Need to consider cropping the fisheye.  No need to process the bottom and top
+
+4/21/19
+updating get_jpg and fisheye to PC
+
+T40
+Integrating all the features into one build
+	webcam with fisheye lens
+	serial commands sent to arduino
+	pointing adjustments set using keyboard
+	
+T41
+General cleanup.  Moving hardcoded params to cong.json
+Making fisheye processing an if statement
+
+t42
+added autodetect of comm port for arduino
+added keyboard input for adjusting servo center and servo range
+corrected mapping of video pointer to servo command
+Works well but still quirky on target selection.
+Converted to 120 deg FOV camera that does not need fisheye correction.  FPS up to 10 on laptop.
+
+t43
+Changed interest calculator to stop pointing at something if it is not moving, rather than waiting until the next fixed interval
+Changed FaceCascadeClass parameters to reduce false alarms - from 1.1, 5 to 1.1, 10
+   assume that the "interest" calculations will reject everything that is not moving
+Re-enabled profile trackers 
+Added servo control parameters to the config file & put in max/min limiters to prevent hitting hard stops
+Moved webcam frame grabber to a new class/thread
+Added processing time for face, profile, other face to the text overlay
+SLOC count, per pygount
+	310 t43.py 
+	28  ComArduinoFunctions thread
+	40  FaceCascadeClass thread	
+	38  FaceProfileCascaseClass thread
+	29  WebcamStream thread
+	18  json config file
+Changed servo1 to x and servo2 to y (update arduino to ArduinoPC2_servo7.ino)
+Changed arduino baud rate back to 115200 - 
+
+t44
+a couple tweaks to test in the barn
+interest selector changed too often
+still having troubles in low light, and with the new webcam that is blurry/smeared
+
+t45
+removing profile recognizers.  This was causing the "high interest" selection, I think
+Testing other cascades
+   upper body - not very reliable
+   eye pair big and small- not very reliable
+   nose - this was pretty good, should test this downstairs and in the barn
+   face profile new - this seems to work well.  it is a larger file size than the original i was using
+   
+t46
+add palm detector to trigger roar 
+  PalmCascadeClass
+  When 2 or more pals are detected, the word "HANDS" appears in the upper right of the screen
+	and servo3 value is changed (servo4 and 5 added for debug)
+	
+Adafruit audio player
+  T01.wav or T01.ogg will play when input 1 is triggered (pulled low)
+	Current load	T01 - Trex roar,  T03 - barney
+	Need 50 to 100 ms trigger to start
+	
+t47
+rewrote the arduino program.  Now requires ArduinoPC_servo10.
+ *   removed the "roar" program and made everything dependent on PC commands
+ *   The first 3 message parameters are meant to be servos, centered at 90 deg
+ *   The 4th parameter selects the the music track to play (1 or 3)
+ *   The 5th pin controls the LED eyes
+ 
+ Arduino FX player notes
+ Low pulse must be 125ms to activate
+ Arduino cannot power both FX board and amplifier
+ fx_player_test arduiono program set up to test
+ FX board set up with the following: note: arduino pin 0 and 1 are tx/rx
+   Arduino pin 1 = fx pin 2 = T.Rex roar
+   Arduino pin 2 = fx pin 3 = hello my baby
+   Arduino pin 3 = fx pin 4 = I love you
+   
+   FX board pins
+	Input side
+		Pins 1, 2, 3 audio triggers to arduino pins 2, 3,4 
+		Far right GND to any ardino GND
+	Other side	
+		Speaker output GND/L (the farthest to the right)
+		Vin - Farthest to the left
+		GND, next to power
+	
+	Amplifier board pins
+		Input - far left G and LED
+		Power - middle two pins
+		To speaker - on the right, Lout +/-
+t48	
+HC-06 Bluetooth serial connection
+connected HC-06 to pins 0 (Rx on arduino) to TX on HC-06, and pin 1 (Tx on arduino) to RX on CH-06
+Paired it with the PC - got 2 COM ports COM8 (Incoming HC-06) and COM7 (Outgoing (HC-06 'Dev B')
+  Incoming is noted as a device that initiates the connection  
+  Outgoing is noted as your PC initiates the connection.
+I can establish conection if I open Bluetooth Serial Terminal and initiate a session.  This connects it.
+And then, I can run bt_test01.py.  I need to reset the arduino running rduinoPC2_servo12 to get it to resend the "arduino is ready" messge
+Got it working, but only once out of 10 times.  Som
+ething to do with "connecting" but not getting  good pyserial com port set up.
+Maybe Windows has multiple things trying to get status, and my python cant connect.
+
+t49
+Back to physical connection. It's more reliable.
+Updated servo sketch to ArduinoPC2_servo12.ino to go back to 57600 and clean up a couple items
+   Arduino pin 5 = fx pin 1 = T.Rex roar
+   Arduino pin 6 = fx pin 2 = hello my baby
+   Arduino pin 7 = fx pin 3 = I love you
+   LED Eyes: pin 8  (these now blink twice at startup)
+   Servo1 - 9  x left right
+   Servo2 - 10 y up/down
+   Servo3 - 11  mouth
+
+t50
+stable, used to run barn tests.
+lighting is still inconsistent.  with black background, the faces were washed out.  Set a max brightness?
+interest selection jumped back and forth too fast.  And velocity is not really playing a role, if the tracking is slow.
+change back to a simple 2 second dwell?
+
+Hyper-V setup of linux
+added a new virtual switch, pointing to an Internal bus
+Then, I added a "share with others" to the wifi connection properties/share
+	
