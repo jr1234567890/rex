@@ -39,7 +39,7 @@ class DetectFaces:
        
        #TODO uncomment this when back on the RPi
         #initialize the Intel processing stick as the target
-        #net.setPreferableTarget(cv2.dnn.DNN_TARGET_MYRIAD)
+        self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_MYRIAD)
 
     def update(self, frame):
         

@@ -44,7 +44,7 @@ from threading import Thread
 #import my functions
 from CVFrameCapture2020 import FrameCapture         # Captures video in a separate thread/core to speed up the main processing rate
 from PalmCascadeClass import PalmCascade            #Detects the number of palms
-from FaceDetectionFunctions import DetectFaces      #The face detector, using HOG, and the Neural net stick
+#from FaceDetectionFunctions import DetectFaces      #The face detector, using HOG, and the Neural net stick
 from RexCommands import RexCommand                  #Sends servo commands to the Arduino using serial port
 #rom AudioPlayerFunctions import PlayAudio          # a threaded audio player, based on # hands seen
 
@@ -98,7 +98,7 @@ if(conf["output_video"]):
 
 #Initialize the threads
 myPalmDetector = PalmCascade(gray)
-myDetectFaces = DetectFaces(frame, proc_w, proc_h)
+#myDetectFaces = DetectFaces(frame, proc_w, proc_h)
 #myPlayAudio=PlayAudio()
 
 #file for face landmark detection
@@ -201,6 +201,22 @@ pointx = 90
 pointy = 90
 eye_angle=0
 
+############         Initialize the face detection function
+
+w=proc_w
+h=proc_h
+    
+# set up the DNN detector
+prototxt = 'deploy.prototxt'
+model ='res10_300x300_ssd_iter_140000.caffemodel'
+confidence_limit=0.4
+net = cv2.dnn.readNetFromCaffe(prototxt,model)
+
+#TODO uncomment this when back on the RPi
+#initialize the Intel processing stick as the target
+net.setPreferableTarget(cv2.dnn.DNN_TARGET_MYRIAD)
+net.setPreferableBackend(cv2.dnn.DNN_BACKEND_INFERENCE_ENGINE)
+
 ############         Initialize the face recognition function
 
 embedding_model_name="recognizer/openface_nn4.small2.v1.t7"
@@ -212,6 +228,7 @@ confidence_name=0.7
 print("[INFO] loading face recognizer...")
 embedder = cv2.dnn.readNetFromTorch(embedding_model_name)
 embedder.setPreferableTarget(cv2.dnn.DNN_TARGET_MYRIAD)
+embedder.setPreferableBackend(cv2.dnn.DNN_BACKEND_INFERENCE_ENGINE)
 #embedder.setPreferableTarget(cv2.dnn.DNN_BACKEND_OPENCV)
 print ("preferred target set up for embedder")
 
@@ -277,7 +294,32 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     detstart_time=time.time()
 
     #run the face detector
-    rects=myDetectFaces.update(frame)
+   # blob = cv2.dnn.blobFromImage(cv2.resize(frame, (400, 400)), 1.0, (400,400),(104.0,117.0,123.0))    
+    blob = cv2.dnn.blobFromImage(cv2.resize(frame, (300, 300)), 1.0, (300,300),(104.0,117.0,123.0))    
+    net.setInput(blob)
+
+    #run the detectcor
+    detections=net.forward()
+
+    #reset rects
+    rects=[]
+
+    #loop through the detections and create rect list
+
+    w=proc_w
+    h=proc_h
+
+    for i in range(0, detections.shape[2]):
+        confidence=detections[0,0,i,2]
+        if confidence<confidence_limit:
+            continue
+        box=detections[0,0,i,3:7] * np.array([w, h, w, h]) # creates box corners from 3,4,5,6. scaled up by original w and h
+        (startx,starty,endx,endy) = box.astype("int") #converts to integers
+
+        #add the rectangle to the rects structure
+        rects.append((startx, starty, endx, endy))
+        #
+        #rects=myDetectFaces.update(frame)
 
     #calculate the face detection time
     detproctime=time.time()-detstart_time
@@ -393,7 +435,7 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
         target_y = proc_h/2
         eye_angle=0
         ID_object=999   #set the recognizer ID to default
-        print ("no detections")
+        #print ("no detections")
 
     else:  #else process the detection(s)
 
@@ -424,12 +466,13 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
         eye_angle_temp = np.degrees(np.arctan2((rightEyeCenter[1] - leftEyeCenter[1]) , (rightEyeCenter[0] - leftEyeCenter[0])))
         eye_angle =  eye_angle_temp * (1-eye_alpha) + eye_angle * eye_alpha
 
-        print ("eye angle ", eye_angle)
+        #print ("eye angle ", eye_angle)
 
         #compute the time it took to process the objects
         objectprocttime=time.time()-starttime
 
     #################           Run face identifier on the selected face
+
         if (new_object_flag==True):
             #define the box in the coordinates needed by the recognizer
             (startX, startY, endX, endY) = (l,t,r,b)
@@ -450,7 +493,7 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
                 faceBlob = cv2.dnn.blobFromImage(face, 1.0 / 255, (96, 96),
                     (0, 0, 0), swapRB=True, crop=False)
                 embedder.setInput(faceBlob)
-                print("embedder set up with blob")
+                #print("embedder set up with blob")
                 vec = embedder.forward()
 
                 # perform classification to recognize the face
@@ -717,7 +760,7 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
         if (ID_object==6): name="Rick"
             
         text = "{}: {:.2f}%".format(name, proba * 100)      
-        cv2.putText(frame, text, (start_x[selected_object], start_y[selected_object]), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2) 
+        cv2.putText(frame, text, (start_x[selected_object], start_y[selected_object]), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 4) 
         #print (text)
 
 

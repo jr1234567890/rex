@@ -60,8 +60,14 @@ class FrameCapture:
             ## for Windows, with Arducam b0203 camera
             #best settings seem to be to capture with 1920x1080 and scale down
             # if both x and y (index 3 and 4) are not correct, it will default to 640x480
-            self.myframe = cv2.VideoCapture(0 , cv2.CAP_DSHOW)
-                #cv2.CAP_DSHOW added to get rid of black side bars on Arducam b0203 camera
+
+            
+
+            if (conf["linux"]):
+                self.myframe = cv2.VideoCapture(0)
+            else:
+                self.myframe = cv2.VideoCapture(0 , cv2.CAP_DSHOW)
+                #cv2.CAP_DSHOW is a Windows option; added to get rid of black side bars on Arducam b0203 camera
             self.myframe.set(3,res[0])
             self.myframe.set(4,res[1])    
             self.myframe.set(5,25)   
