@@ -46,5 +46,6 @@
 	"ed_roar":"daffy_despicable.wav",
 	"rick_roar":"yosemite_toads.wav",
 	"tilt_ratio":  1,
+	"max_tilt": 20,
 	"dummy_end_of_list_so_I_don't_worry_about_commas": 0
 }

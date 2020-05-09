@@ -4,7 +4,7 @@
 #Updated to use Intel DNN processing stick, and to move screen capture to a separate thread
 
    
-# Requires use of arduino running: ArduinoPC2_servo14  TODO change this to 15 to add the roll value
+# Requires use of arduino running: rex2020r0.ino
 #
 # assumes the existence of file conf.json
 
@@ -182,6 +182,8 @@ target_x = 0
 target_y = 0
 servo_x = proc_w/2
 servo_y = 0
+
+tilt_servo=90
 
 servo_start_time = 0.0   # the time to dwell on a target
 servo_dwell_time = conf["face_dwell"]   # the time to dwell on a target before picking another
@@ -386,7 +388,7 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     target_x = xlist[selected_object]
     target_y = ylist[selected_object]
     
-    #if there are not detections, set everything to neutral 
+    #if there are no detections, set everything to neutral 
     if len(current_list)==0:        
         #set the target to the neutral point
         target_x = proc_w/2
@@ -425,6 +427,11 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
         eye_angle =  eye_angle_temp * (1-eye_alpha) + eye_angle * eye_alpha
 
         print ("eye angle ", eye_angle)
+        #calculate servo command based on eye_angle multiplied by a config paramter
+        tilt_servo= int(90 + conf["tilt_ratio"]*eye_angle)
+        # use numpy.clip to make sure the value is in the max tilt range
+        np.clip(tilt_servo,90-conf["max_tilt"], 90+conf["max_tilt"])
+
 
         #compute the time it took to process the objects
         objectprocttime=time.time()-starttime
@@ -615,7 +622,9 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
 
     # write the command values to the arduino.
     if(skipflag==0):
-        commandecho=myRexCommand.update(pointx, pointy, mouth_pos, eye_angle, eye_cmd)     
+        commandecho=myRexCommand.update(pointx, pointy, mouth_pos, eye_cmd,tilt_servo)     
+    #DEBUG
+    print(commandecho)
 
     ############    Create the Output Display  ################
 
