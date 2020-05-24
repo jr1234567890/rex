@@ -55,15 +55,14 @@ class RexCommand:
         self.y_max = conf["sy_max"]  # up
       
 
-
-
-    def update(self,x,y,jaw,roll,eye):
+    def update(self,x,y,jaw,eye,tilt):
          # write the servo value to the arduino.
-        # data format for serial interface to arduino is "SERVO5" and 5 integers: x, y, mouth, roll, eyes
+        # data format for serial interface to arduino is "SERVO5" and 5 integers: 
+            #x, y, mouth, eye on/off command and head tilt
         
         ser=self.ser
 
-        arduino_string= "<SERVO5," + str(x) + "," + str(y) + "," + str(jaw) + "," + str(roll) + "," + str(eye) + ">"
+        arduino_string= "<SERVO5," + str(x) + "," + str(y) + "," + str(jaw) + "," + str(eye) + "," + str(tilt) + ">"
 
         #skip the serial write if the arduino is not connected, skipflag==1
         if self.skipflag==0:
@@ -81,6 +80,6 @@ class RexCommand:
         else:  #else this is a test config without an arduino present, and we just wrap the input
             dataRecvd = arduino_string
       
-        # return the set of trackable objects
-        print (data_received)
-        return data_received
+        # return the echo from the arduino
+        #print  (dataRecvd)
+        return (dataRecvd)

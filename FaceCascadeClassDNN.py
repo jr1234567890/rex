@@ -16,7 +16,7 @@ class FaceCascade:
             
         prototxt = 'deploy.prototxt'
         model ='res10_300x300_ssd_iter_140000.caffemodel'
-        confidence_limit=0.4
+        confidence_limit=0.6
         #prototxt = 'MobileNetSSD_deploy.prototxt.txt'  #the full model
         #model ='MobileNetSSD_deploy.caffemodel'
 

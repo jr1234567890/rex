@@ -3,7 +3,7 @@
 
 #Updated to use Intel DNN processing stick, and to move screen capture to a separate thread
 
-#test comment  again and again
+#tTHis version pulls the face detection in line, instead of in the function
 
 # Requires use of arduino running: ArduinoPC2_servo14  TODO change this to 15 to add the roll value
 #

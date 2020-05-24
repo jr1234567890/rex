@@ -2,8 +2,7 @@
 # Copyright 2020 Jeff Reuter
 
 #Updated to use Intel DNN processing stick, and to move screen capture to a separate thread
-
-   
+ 
 # Requires use of arduino running: rex2020r0.ino
 #
 # assumes the existence of file conf.json
@@ -204,23 +203,23 @@ pointy = 90
 eye_angle=0
 
 ############         Initialize the face recognition function
+if conf["enable_face_ID"]:
+    embedding_model_name="recognizer/openface_nn4.small2.v1.t7"
+    recognizername="recognizer/recognizer.pickle"
+    le_name="recognizer/le.pickle"
+    confidence_name=0.7
 
-embedding_model_name="recognizer/openface_nn4.small2.v1.t7"
-recognizername="recognizer/recognizer.pickle"
-le_name="recognizer/le.pickle"
-confidence_name=0.7
-
-# load our serialized face embedding model from disk
-print("[INFO] loading face recognizer...")
-embedder = cv2.dnn.readNetFromTorch(embedding_model_name)
-embedder.setPreferableTarget(cv2.dnn.DNN_TARGET_MYRIAD)
-#embedder.setPreferableTarget(cv2.dnn.DNN_BACKEND_OPENCV)
-print ("preferred target set up for embedder")
+    # load our serialized face embedding model from disk
+    print("[INFO] loading face recognizer...")
+    embedder = cv2.dnn.readNetFromTorch(embedding_model_name)
+    embedder.setPreferableTarget(cv2.dnn.DNN_TARGET_MYRIAD)
+    #embedder.setPreferableTarget(cv2.dnn.DNN_BACKEND_OPENCV)
+    print ("preferred target set up for face embedder")
 
 
-# load the actual face recognition model along with the label encoder
-recognizer = pickle.loads(open(recognizername, "rb").read())
-le = pickle.loads(open(le_name, "rb").read())
+    # load the actual face recognition model along with the label encoder
+    recognizer = pickle.loads(open(recognizername, "rb").read())
+    le = pickle.loads(open(le_name, "rb").read())
 
 #initialize the audio
 wave_obj = sa.WaveObject.from_wave_file("Cat-purring-sound-4-sec.wav")
@@ -246,11 +245,13 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
 
     #get new frame from the source
     frame=myFrameCapture.getFrame()
+    #resize to 500 to speed up the process
 
-    #############   PALM   DETECTOR   ###############
+
+    #############    PALM   DETECTOR   ###############
     #send grayscale frame to the palm detector
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    myPalmDetector.newFrame(gray)
+    palmgray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    myPalmDetector.newFrame(palmgray)
 
     # get the total number of palms detected in the frame
     if myPalmDetector.get_new_data_flag() == 1:  # check to see if there is a new detection
@@ -273,7 +274,7 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     rects4 = []
     rects5 = []
 
-    #######   FACE DETECTOR #############
+    #######    FACE DETECTOR #############
 
     #initialize a timer to measure face detection time
     detstart_time=time.time()
@@ -402,9 +403,9 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
         ##############  calculate head tilt for the selected object ###############
 
         # create dlib rectangle for the selected object bounding box
-        l=int(start_x[selected_object])
+        l=int(start_x[selected_object])-10
         t=int(start_y[selected_object])
-        r=int(end_x[selected_object])
+        r=int(end_x[selected_object])+10
         b=int(end_y[selected_object])
         faceBoxRectangle = dlib.rectangle(l,t,r,b)
         #print("face box", faceBoxRectangle)
@@ -412,6 +413,11 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
         #run the dlib face landmark process, and covert dlib format back to numpy format
         shape = predictor(gray, faceBoxRectangle)
         shape = face_utils.shape_to_np(shape)
+
+        #DEBUG
+        #Display landmarks
+        for (x,y) in shape:
+            cv2.circle(frame, (x,y),1, (0,0,255),-1)
 
         #create arrays of the points associated with eyes, and calculate the centroid
         # from Fig 2 of https://www.pyimagesearch.com/2017/04/03/facial-landmarks-dlib-opencv-python/
@@ -426,18 +432,17 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
         eye_angle_temp = np.degrees(np.arctan2((rightEyeCenter[1] - leftEyeCenter[1]) , (rightEyeCenter[0] - leftEyeCenter[0])))
         eye_angle =  eye_angle_temp * (1-eye_alpha) + eye_angle * eye_alpha
 
-        print ("eye angle ", eye_angle)
+       
         #calculate servo command based on eye_angle multiplied by a config paramter
         tilt_servo= int(90 + conf["tilt_ratio"]*eye_angle)
         # use numpy.clip to make sure the value is in the max tilt range
-        np.clip(tilt_servo,90-conf["max_tilt"], 90+conf["max_tilt"])
-
+        tilt_servo=np.clip(tilt_servo,90-conf["max_tilt"], 90+conf["max_tilt"])
 
         #compute the time it took to process the objects
         objectprocttime=time.time()-starttime
 
     #################           Run face identifier on the selected face
-        if (new_object_flag==True):
+        if (conf["enable_face_ID"] and new_object_flag==True):
             #define the box in the coordinates needed by the recognizer
             (startX, startY, endX, endY) = (l,t,r,b)
             #create an image chip of the face
@@ -457,7 +462,7 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
                 faceBlob = cv2.dnn.blobFromImage(face, 1.0 / 255, (96, 96),
                     (0, 0, 0), swapRB=True, crop=False)
                 embedder.setInput(faceBlob)
-                print("embedder set up with blob")
+                #print("face ID embedder set up with blob")
                 vec = embedder.forward()
 
                 # perform classification to recognize the face
@@ -624,7 +629,7 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     if(skipflag==0):
         commandecho=myRexCommand.update(pointx, pointy, mouth_pos, eye_cmd,tilt_servo)     
     #DEBUG
-    print(commandecho)
+        #print(commandecho)
 
     ############    Create the Output Display  ################
 
@@ -713,21 +718,22 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
         thickness=4
         #print("drawing right eye ", rightEyeCenter, leftEyeCenter)
         cv2.line(frame, (rightEyeCenter[0],rightEyeCenter[1]),(leftEyeCenter[0],leftEyeCenter[1]),(255,255,0) , thickness) 
-
+        
         #display the recognition ID
-        if (ID_object==999): 
-            name="Unknown"
-            proba=0
-        if (ID_object==1): name="Jeff"
-        if (ID_object==2): name="Kathy"
-        if (ID_object==3): name="David"
-        if (ID_object==4): name="Randy"
-        if (ID_object==5): name="Ed"
-        if (ID_object==6): name="Rick"
+        if conf["enable_face_ID"]:
+            if (ID_object==999): 
+                name="Unknown"
+                proba=0
+            if (ID_object==1): name="Jeff"
+            if (ID_object==2): name="Kathy"
+            if (ID_object==3): name="David"
+            if (ID_object==4): name="Randy"
+            if (ID_object==5): name="Ed"
+            if (ID_object==6): name="Rick"
             
-        text = "{}: {:.2f}%".format(name, proba * 100)      
-        cv2.putText(frame, text, (start_x[selected_object], start_y[selected_object]), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2) 
-        #print (text)
+            text = "{}: {:.2f}%".format(name, proba * 100)      
+            cv2.putText(frame, text, (start_x[selected_object], start_y[selected_object]), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2) 
+            #print (text)
 
 
 
@@ -772,7 +778,7 @@ myFrameCapture.stop()
 
 #reset head to neutral position
 if skipflag==0:
-    commandecho=myRexCommand.update(90, 90, 90, 0, 0)
+    commandecho=myRexCommand.update(90, 90, 90, 0, 90)
 
 if(conf["output_video"]):
     sleep(0.5) 
