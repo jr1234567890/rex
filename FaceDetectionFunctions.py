@@ -34,14 +34,13 @@ class DetectFaces:
         # set up the DNN recognizer
         prototxt = 'deploy.prototxt'
         model ='res10_300x300_ssd_iter_140000.caffemodel'
-        self.confidence_limit=0.4
         self.net = cv2.dnn.readNetFromCaffe(prototxt,model)
        
        #TODO uncomment this when back on the RPi
         #initialize the Intel processing stick as the target
         self.net.setPreferableTarget(cv2.dnn.DNN_TARGET_MYRIAD)
 
-    def update(self, frame):
+    def update(self, frame, my_confidence):
         
         #set up the detector frame for processing
         #(h,w)=frame.shape[:2]
@@ -56,10 +55,10 @@ class DetectFaces:
         #Changing the blob values can get better results with smaller faces (further away)
 
         #original from his example
-        #blob = cv2.dnn.blobFromImage(cv2.resize(frame, (300, 300)), 1.0, (300,300),(104.0,177.0,123.0))    
+        blob = cv2.dnn.blobFromImage(cv2.resize(frame, (300, 300)), 1.0, (300,300),(104.0,177.0,123.0))    
         
         #modified per the comment
-        blob = cv2.dnn.blobFromImage(cv2.resize(frame, (400, 400)), 1.0, (400,400),(104.0,117.0,123.0))    
+        #blob = cv2.dnn.blobFromImage(cv2.resize(frame, (400, 400)), 1.0, (400,400),(104.0,117.0,123.0))    
         self.net.setInput(blob)
 
         #run the detectcor
@@ -72,7 +71,7 @@ class DetectFaces:
 
         w=self.w
         h=self.h
-
+        self.confidence_limit=my_confidence
         #  
         for i in range(0, detections.shape[2]):
             confidence=detections[0,0,i,2]

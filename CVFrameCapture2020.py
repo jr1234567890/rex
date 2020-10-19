@@ -11,6 +11,8 @@ import sys
 import json
 #import numpy as np
 import imutils
+import platform   # for platform.system() to get the OS name
+
 
 #USB Camera set/get indices
 # 0. CV_CAP_PROP_POS_MSEC Current position of the video file in milliseconds.
@@ -61,9 +63,10 @@ class FrameCapture:
             #best settings seem to be to capture with 1920x1080 and scale down
             # if both x and y (index 3 and 4) are not correct, it will default to 640x480
 
-            
+            #use the platform.system() call to identify the OS< and use the appropriate CV capture routine
+            print (platform.system())
 
-            if (conf["linux"]):
+            if (platform.system()=="Linux"):
                 self.myframe = cv2.VideoCapture(0)
             else:
                 self.myframe = cv2.VideoCapture(0 , cv2.CAP_DSHOW)
@@ -162,9 +165,14 @@ class FrameCapture:
 
             
             #crop it
-            temp = temp[self.ycrop:self.y-self.ycrop, self.xcrop:self.x-self.xcrop]
+            self.framefull = temp[self.ycrop:self.y-self.ycrop, self.xcrop:self.x-self.xcrop]
+
             #scale it
-            self.frame = cv2.resize(temp, (self.proc_w, self.proc_h))
+            self.frame = cv2.resize(self.framefull, (self.proc_w, self.proc_h))
+            
+            #make a small grayframe to speed up some recognizers
+            temp2 = cv2.resize(self.frame, (int(self.proc_w/2), int(self.proc_h/2)))
+            self.framesmall = cv2.cvtColor(temp2, cv2.COLOR_BGR2GRAY)
 
             lastframetime=time.time()
      
@@ -210,6 +218,14 @@ class FrameCapture:
         #print(self.myframe.shape)
         #print("Frame sent")
         return self.frame
+
+    def getFrameSmall(self):
+        # return the small frame, for use by the hand recognizer
+        return self.framesmall
+
+    def getFrameFull(self):
+        # return the original frame
+        return self.framefull
  
     def getSize(self):
         # return the frame size recently read
