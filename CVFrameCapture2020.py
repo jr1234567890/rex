@@ -80,8 +80,8 @@ class FrameCapture:
             # this does not work on the Arducam
             #self.myframe.set(cv2.CAP_PROP_FOURCC,cv2.VideoWriter_fourcc('H','2','6','4'))
 
-        for i in range (0,47):
-            print(i, self.myframe.get(i))
+        #for i in range (0,47):  #print camera parameters
+        #    print(i, self.myframe.get(i))
         
         # ret, frame = self.myframe.read()
         # self.frame = self.frame[self.ycrop:self.y-self.ycrop, self.xcrop:self.x-self.xcrop]

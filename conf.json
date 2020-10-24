@@ -1,6 +1,6 @@
 {
 	
-	"arduino": false,
+	"arduino": true,
 	"use_test_video": false,
 	"output_video": false,
 	"enable_face_ID": false,
@@ -49,7 +49,7 @@
 	"randy_roar":"human-heartbeat-daniel_simon.wav",
 	"ed_roar":"daffy_despicable.wav",
 	"rick_roar":"yosemite_toads.wav",
-	"tilt_ratio":  1,
-	"max_tilt": 20,
+	"tilt_ratio":  2.5,
+	"max_tilt": 30,
 	"dummy_end_of_list_so_I_don't_worry_about_commas": 0
 }

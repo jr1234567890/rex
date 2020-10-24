@@ -185,6 +185,7 @@ servo_x = proc_w/2
 servo_y = 0
 
 tilt_servo=90
+mouth_opening=0
 
 servo_start_time = 0.0   # the time to dwell on a target
 servo_dwell_time = conf["face_dwell"]   # the time to dwell on a target before picking another
@@ -441,12 +442,12 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
         shape = landmarkpredictor(frame, faceBoxRectangle)
         shape = face_utils.shape_to_np(shape)
 
-      
-
         #DEBUG
         #Display landmarks
-        for (x,y) in shape:
-            cv2.circle(frame, (x,y),4, (0,0,255),-1)
+        #for (x,y) in shape:
+        #    cv2.circle(frame, (x,y),4, (0,0,255),-1)
+
+
 
         #5/24/20  changed to 5 point landmakr from original 68 point detector
         #share array
@@ -464,21 +465,50 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
         #old 68 point detector, mapping to eye centerrs
         #create arrays of the points associated with eyes, and calculate the centroid
         # from Fig 2 of https://www.pyimagesearch.com/2017/04/03/facial-landmarks-dlib-opencv-python/
+
+
+
+
+
+
         leftEyePts = shape[37:42]   #lStart:lEnd]
         rightEyePts = shape[43:48]   #rStart:rEnd]
         leftEyeCenter = leftEyePts.mean(axis=0).astype("int")
         rightEyeCenter = rightEyePts.mean(axis=0).astype("int")
 
-        (p1,upperLip)=shape[63]  #upper lip point
-        (p2,lowerLip)=shape[67]  #lower lip
-        (p3, topNose)=shape[28]  #top of the nose
-        (p4, chin)=shape[9]  #bottom of chin
+        #(p1,upperLip)=shape[63]  #upper lip point
+        #(p2,lowerLip)=shape[67]  #lower lip
+        #(p3, topNose)=shape[28]  #top of the nose
+        #(p4, chin)=shape[9]  #bottom of chin
+
+        #Mouth landmarks, inside of lips
+        #           63
+        #       62      64
+        #   61              65
+        #       68      66
+        #           67
+
+        # get xy coordinates of the mouth points
+        #shape index is 0 to 67)
+        (x61,y61)=shape[60]  
+        (x62,y62)=shape[61]  
+        (x63,y63)=shape[62]  
+        (x64,y64)=shape[63]  
+        (x65,y65)=shape[64]  
+        (x66,y66)=shape[65]  
+        (x67,y67)=shape[66]  
+        (x68,y68)=shape[67]  
 
 
-        #calculate the y axis mouth opening as a percentage of the top of nose to mouth
-        mouth_opening= (lowerLip-upperLip)/(chin-topNose)*100
+        #calculate the y axis mouth opening as a function of the mouth width
+        mouth_opening=15*(abs(y68-y62) + abs(y67-y63) + abs(y66-y64))/( 2* abs(x65-x61))
         #print (int(mouth_opening))
         #Range is -1 to 12 for normal mouth movement. Up to 16 if I really gape open 
+        #display a circle on the mouth with the size of the mouth opening
+        circle_size=int(max(0,min(mouth_opening,20)))
+        #print (circle_size)
+        cv2.circle(frame, (x67,y67),circle_size, (0,0,255),-1)
+        #cv2.circle(frame, (x,y),4, (0,0,255),-1)
 
         # compute the angle between the eye centroids (arctan of deltaY/deltaX)
         # and smooth it out with a pseudo moving average
@@ -488,7 +518,7 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
 
        
         #calculate servo command based on eye_angle multiplied by a config paramter
-        tilt_servo= int(90 + conf["tilt_ratio"]*eye_angle)
+        tilt_servo= int(90 - conf["tilt_ratio"]*eye_angle)
         # use numpy.clip to make sure the value is in the max tilt range
         tilt_servo=np.clip(tilt_servo,90-conf["max_tilt"], 90+conf["max_tilt"])
 
@@ -498,6 +528,11 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     #################           Run face identifier on the selected face
         if (conf["enable_face_ID"] and new_object_flag==True):
             #define the box in the coordinates needed by the recognizer
+
+#TODO
+##Get the chip from the original full scale image, rather than the scaled down image
+
+
             (startX, startY, endX, endY) = (l,t,r,b)
             #create an image chip of the face
             face = frame[startY:endY, startX:endX]
@@ -577,7 +612,7 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     # convert to angle based on FOV of the camera, from the center of the camera
     servo_x2 = servo_x1*x_fov/proc_w
     servo_x3 = servo_x2*sx_scale       # convert to servo angle
-    pointx = int(-servo_x3 + sx_center)  # add offset for the servo center position
+    pointx = int(servo_x3 + sx_center)  # add offset for the servo center position
 
     servo_y1=-(servo_y-proc_h/2)
     servo_y2=servo_y1*y_fov/proc_h
@@ -596,12 +631,10 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     #set Trex jaw servo to match mouth opening of the person.
     # mouth_open and mouth_closed are the servo min/max.
     # mouth_opening is the detected opening from the facial feature as a percentage of the face height.
-    #   range is 0 to 12
+    #   range is 0 to 12 since the servo range is about the same as the mouth opening range
 
     mo=conf["mouth_open"]      #nominally servo = 77
-    mc=conf["mouth_closed"]    #nominally server = 90
-
-    # since the servo range is about the same as the mouth opening range
+    mc=conf["mouth_closed"]    #nominally server = 90  
     mouth_pos= int (mc - mouth_opening)
     mouth_pos=max(mo,min(mouth_pos,mc))
     #print(mouth_pos)
@@ -691,13 +724,12 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
                     play_obj = wave_obj.play()        
             ID_timer[ID_object]=time.time()
                 
-
-    print(mouth_pos)
     # write the command values to the arduino.
     if(skipflag==0):
-        commandecho=myRexCommand.update(pointx, pointy, mouth_pos, eye_cmd,tilt_servo)     
+        commandecho=myRexCommand.update(pointx, pointy, mouth_pos, eye_cmd,tilt_servo)    
+        #print(tilt_servo) 
     #DEBUG
-        #print(commandecho)
+        print(commandecho)
 
     ############    Create the Output Display  ################
 
@@ -783,7 +815,7 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
         #for (x, y) in shape:
         #    cv2.circle(frame, (x, y), 1, (0, 0, 255), -1)
 
-        #display the line between the eyes
+        #display the line between theservo eyes
         thickness=4
         #print("drawing right eye ", rightEyeCenter, leftEyeCenter)
         cv2.line(frame, (rightEyeCenter[0],rightEyeCenter[1]),(leftEyeCenter[0],leftEyeCenter[1]),(255,255,0) , 1) 
@@ -837,6 +869,10 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
 # shutdown and cleanup
 print ("shutting down")
 
+
+
+
+
 # destroy the opencv video window
 cv2.destroyAllWindows
 
@@ -846,7 +882,19 @@ myFrameCapture.stop()
 #myPlayAudio.stop()
 
 #reset head to neutral position
+# 10/24/20 - slew the servos to the neutral position instead of a single command
 if skipflag==0:
+    step=20
+    for i in range(0, step):
+        slewx=int(pointx+ i*(90-pointx)/step)
+        slewy=int(pointy+ i*(90-pointy)/step)
+        slewmouth=int(mouth_pos+ i*(90-mouth_pos)/step)
+        slewtilt =int(tilt_servo+ i*(90-tilt_servo)/step)
+
+        commandecho=myRexCommand.update(slewx, slewy, slewmouth, 0,slewtilt)    
+        print("slew to neutral ", step, " ", commandecho) 
+        time.sleep(2/step)
+
     commandecho=myRexCommand.update(90, 90, 90, 0, 90)
 
 if(conf["output_video"]):
