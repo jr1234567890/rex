@@ -2,8 +2,7 @@
 # Copyright 2020 Jeff Reuter
 
 #Updated to use Intel DNN processing stick, and to move screen capture to a separate thread
-
-   
+ 
 # Requires use of arduino running: rex2020r0.ino
 #
 # assumes the existence of file conf.json
@@ -15,6 +14,7 @@ import sys
 import serial  # needed for pyserial interface to arduino
 import numpy as np
 import os.path
+import platform   # for platform.system() to get the OS name
 
 from imutils import face_utils
 import dlib
@@ -81,10 +81,11 @@ print("Setup complete, starting image processing")
 
 #############  Frame Capture setup **********************
 myFrameCapture = FrameCapture()  #all capture paramters are in the json config file
-sleep(0.1)     #let the camera settle before sampling the data
+sleep(3)     #let the camera settle before sampling the data
 
 # get a frame from the stream function to initialize data & initialize the palm tracker
 frame=myFrameCapture.getFrame()
+orig_frame=myFrameCapture.getFrame()
 
 proc_h, proc_w, channels = frame.shape  #this is the shape of the image coming out of the frame grabber
 print ("Main program frame initialization: frame size =", proc_w, proc_h)
@@ -102,7 +103,9 @@ myDetectFaces = DetectFaces(frame, proc_w, proc_h)
 #myPlayAudio=PlayAudio()
 
 #file for face landmark detection
-predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
+#replaced 68 point detector with 5 point detector on 5/24/20
+#landmarkpredictor = dlib.shape_predictor("shape_predictor_5_face_landmarks.dat")
+landmarkpredictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
 
 # instantiate our centroid tracker, then initialize a list to store
 # each of our dlib correlation trackers, followed by a dictionary to
@@ -184,6 +187,7 @@ servo_x = proc_w/2
 servo_y = 0
 
 tilt_servo=90
+mouth_opening=0
 
 servo_start_time = 0.0   # the time to dwell on a target
 servo_dwell_time = conf["face_dwell"]   # the time to dwell on a target before picking another
@@ -204,28 +208,31 @@ pointy = 90
 eye_angle=0
 
 ############         Initialize the face recognition function
+if conf["enable_face_ID"]:
+    embedding_model_name="recognizer/openface_nn4.small2.v1.t7"
+    recognizername="recognizer/recognizer.pickle"
+    le_name="recognizer/le.pickle"
+    confidence_name=0.7
 
-embedding_model_name="recognizer/openface_nn4.small2.v1.t7"
-recognizername="recognizer/recognizer.pickle"
-le_name="recognizer/le.pickle"
-confidence_name=0.7
-
-# load our serialized face embedding model from disk
-print("[INFO] loading face recognizer...")
-embedder = cv2.dnn.readNetFromTorch(embedding_model_name)
-embedder.setPreferableTarget(cv2.dnn.DNN_TARGET_MYRIAD)
-#embedder.setPreferableTarget(cv2.dnn.DNN_BACKEND_OPENCV)
-print ("preferred target set up for embedder")
+    # load our serialized face embedding model from disk
+    print("[INFO] loading face recognizer...")
+    embedder = cv2.dnn.readNetFromTorch(embedding_model_name)
+    if (platform.system()=="Linux"):  #see if it's Linux
+            embedder.setPreferableTarget(cv2.dnn.DNN_TARGET_MYRIAD)
+    #embedder.setPreferableTarget(cv2.dnn.DNN_BACKEND_OPENCV)
+    print ("preferred target set up for face embedder")
 
 
-# load the actual face recognition model along with the label encoder
-recognizer = pickle.loads(open(recognizername, "rb").read())
-le = pickle.loads(open(le_name, "rb").read())
+    # load the actual face recognition model along with the label encoder
+    recognizer = pickle.loads(open(recognizername, "rb").read())
+    le = pickle.loads(open(le_name, "rb").read())
 
 #initialize the audio
 wave_obj = sa.WaveObject.from_wave_file("Cat-purring-sound-4-sec.wav")
 play_obj = wave_obj.play()
 #play_obj.stop()
+
+sleep(1)  #pause to let all the threads start up
 
 
 ##############   The main loop   ###############################
@@ -238,6 +245,7 @@ objectprocttime=0
 
 
 
+
 while(True):  # replace with some kind of test to see if WebcamStream is still active?
 
     # while(time.time()-looptime<(1/15)):
@@ -245,12 +253,26 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     # looptime=time.time()    
 
     #get new frame from the source
-    frame=myFrameCapture.getFrame()
 
-    #############   PALM   DETECTOR   ###############
-    #send grayscale frame to the palm detector
-    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    myPalmDetector.newFrame(gray)
+    #wait until a new frame is ready.
+    while(myFrameCapture.getNewFrameStatus==False):
+        sleep(0.01)
+
+    frame=myFrameCapture.getFrame()
+    orig_frame==myFrameCapture.getFrame()
+
+    #cv2.imshow("orig frame", orig_frame)
+    #cv2.imshow("working frame", frame)
+
+    fullframe=myFrameCapture.getFrameFull()
+    scale=myFrameCapture.getScale()
+
+
+    #############    PALM   DETECTOR   ###############
+    #get halfsize grayscale frame from the frame grabber and send to the palm detector
+    ##palmgray = cv2.cvtColor(myFrameCapture.getFrameSmall(), cv2.COLOR_BGR2GRAY)
+    palmgray=myFrameCapture.getFrameSmall()
+    myPalmDetector.newFrame(palmgray)
 
     # get the total number of palms detected in the frame
     if myPalmDetector.get_new_data_flag() == 1:  # check to see if there is a new detection
@@ -273,13 +295,13 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     rects4 = []
     rects5 = []
 
-    #######   FACE DETECTOR #############
+    #######    FACE DETECTOR #############
 
     #initialize a timer to measure face detection time
     detstart_time=time.time()
 
     #run the face detector
-    rects=myDetectFaces.update(frame)
+    rects=myDetectFaces.update(frame,conf["detection_confidence"])
 
     #calculate the face detection time
     detproctime=time.time()-detstart_time
@@ -332,6 +354,8 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
         start_y[objectID] = centroid[3]
         end_y[objectID] = centroid[5]
 
+        #draw a blue box around all detections, with 5 pixels added to each side
+        cv2.rectangle(frame, (start_x[objectID]-5, start_y[objectID]), (end_x[objectID]+5, end_y[objectID]), (255,0,0), 1)
     # print (objectID, start_x[objectID], start_y[objectID], end_x[objectID], end_y[objectID])
 
         ############## calculate the interest parameter   #################
@@ -370,12 +394,12 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
         #print (selected_object)
 
         #set flag if the selected object is different than last time
-        # if (last_selected_object!=selected_object):
-        #     new_object_flag=True
-        #     last_selected_object=selected_object
-        # else:   
-        #     new_object_flag=False
-        new_object_flag=True
+        if (last_selected_object!=selected_object):
+            new_object_flag=True
+            last_selected_object=selected_object
+        else:   
+            new_object_flag=False
+        #new_object_flag=True
 
         # reset the dwell timer and the hit counter for this object
         servo_start_time = time.time()
@@ -395,54 +419,145 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
         target_y = proc_h/2
         eye_angle=0
         ID_object=999   #set the recognizer ID to default
-        print ("no detections")
+        #print ("no detections")
 
     else:  #else process the detection(s)
 
-        ##############  calculate head tilt for the selected object ###############
+        ##############   head tilt ###############
 
         # create dlib rectangle for the selected object bounding box
-        l=int(start_x[selected_object])
-        t=int(start_y[selected_object])
-        r=int(end_x[selected_object])
-        b=int(end_y[selected_object])
-        faceBoxRectangle = dlib.rectangle(l,t,r,b)
-        #print("face box", faceBoxRectangle)
+        buffer=0  #make the box a little bigger than the DNN box
+        buffery=0
+        l=start_x[selected_object]
+        t=start_y[selected_object]
+        r=end_x[selected_object]
+        b=end_y[selected_object]
+
+        #get the image chip of the face
+        faceBoxRectangle = dlib.rectangle(int(l/scale),int(t/scale),int(r/scale),int(b/scale))      
+        (startX, startY, endX, endY) = (l,t,r,b)
+        face12 = orig_frame[startY:endY, startX:endX]
+        #cv2.imshow("target", face12)
+
+        #get the image chip of the face in the full frame
+        (startX, startY, endX, endY) = (int(l/scale),int(t/scale),int(r/scale),int(b/scale))
+        face = fullframe[startY:endY, startX:endX]
+        #cv2.imshow("full frametarget", face)
+        #cv2.imshow("full frame", fullframe)
+ 
+        ###################    Face Landmarks  ############################
 
         #run the dlib face landmark process, and covert dlib format back to numpy format
-        shape = predictor(gray, faceBoxRectangle)
+    
+        #shape = landmarkpredictor(palmgray, faceBoxRectangle)
+        shape = landmarkpredictor(fullframe, faceBoxRectangle)
         shape = face_utils.shape_to_np(shape)
+        #cv2.imshow("full frame", fullframe)
 
+        #DEBUG
+        #Display landmarks
+        #for (x,y) in shape:
+        #    x=int(x*scale)
+        #    y=int(y*scale)
+        #    cv2.circle(frame, (x,y),4, (0,0,255),-1)
+
+        #5/24/20  changed to 5 point landmakr from original 68 point detector
+        #share array
+        #0 = right outer
+        #1 = right inner
+        #2 = left outer
+        #3 = left inner
+        #4 = tip of nose
+     
+        #rightEyePts = shape[0:1]   #lStart:lEnd]
+        #leftEyePts = shape[2:3]   #rStart:rEnd]
+        #leftEyeCenter = leftEyePts.mean(axis=0).astype("int")
+        #rightEyeCenter = rightEyePts.mean(axis=0).astype("int")
+        
+        #old 68 point detector, mapping to eye centerrs
         #create arrays of the points associated with eyes, and calculate the centroid
         # from Fig 2 of https://www.pyimagesearch.com/2017/04/03/facial-landmarks-dlib-opencv-python/
+
+
         leftEyePts = shape[37:42]   #lStart:lEnd]
         rightEyePts = shape[43:48]   #rStart:rEnd]
         leftEyeCenter = leftEyePts.mean(axis=0).astype("int")
         rightEyeCenter = rightEyePts.mean(axis=0).astype("int")
 
+        #(p1,upperLip)=shape[63]  #upper lip point
+        #(p2,lowerLip)=shape[67]  #lower lip
+        #(p3, topNose)=shape[28]  #top of the nose
+        #(p4, chin)=shape[9]  #bottom of chin
+
+        #Mouth landmarks, inside of lips
+        #           63
+        #       62      64
+        #   61              65
+        #       68      66
+        #           67
+
+        # get xy coordinates of the mouth points
+        #shape index is 0 to 67)
+        (x61,y61)=shape[60]  
+        (x62,y62)=shape[61]  
+        (x63,y63)=shape[62]  
+        (x64,y64)=shape[63]  
+        (x65,y65)=shape[64]  
+        (x66,y66)=shape[65]  
+        (x67,y67)=shape[66]  
+        (x68,y68)=shape[67]  
+
+
+        #calculate the y axis mouth opening as a function of the mouth width
+        mouth_opening=15*(abs(y68-y62) + abs(y67-y63) + abs(y66-y64))/( 2* abs(x65-x61))
+        #print (int(mouth_opening))
+        #Range is -1 to 12 for normal mouth movement. Up to 16 if I really gape open 
+        #display a circle on the mouth with the size of the mouth opening
+        circle_size=int(max(0,min(mouth_opening,20)))
+        #print (circle_size)
+        cv2.circle(frame, (int(x67*scale),int((y63+y67)/2*scale)),circle_size, (255,255,0),-1)
+        #cv2.circle(frame, (x,y),4, (0,0,255),-1)
+
         # compute the angle between the eye centroids (arctan of deltaY/deltaX)
-        # and smooth it out with a psuedo moving average
-        eye_alpha=.5  # this is the moving average alpha
+        # and smooth it out with a pseudo moving average
+        eye_alpha=.9  # this is the moving average alpha - higher numbers make the change more gradual
         eye_angle_temp = np.degrees(np.arctan2((rightEyeCenter[1] - leftEyeCenter[1]) , (rightEyeCenter[0] - leftEyeCenter[0])))
         eye_angle =  eye_angle_temp * (1-eye_alpha) + eye_angle * eye_alpha
 
-        print ("eye angle ", eye_angle)
+       
         #calculate servo command based on eye_angle multiplied by a config paramter
-        tilt_servo= int(90 + conf["tilt_ratio"]*eye_angle)
+        tilt_servo= int(90 - conf["tilt_ratio"]*eye_angle)
         # use numpy.clip to make sure the value is in the max tilt range
-        np.clip(tilt_servo,90-conf["max_tilt"], 90+conf["max_tilt"])
-
+        tilt_servo=np.clip(tilt_servo,90-conf["max_tilt"], 90+conf["max_tilt"])
 
         #compute the time it took to process the objects
         objectprocttime=time.time()-starttime
 
-    #################           Run face identifier on the selected face
+    #################           FACE ID             #################
+
+
+#TODO  - only do this until an ID is associated with an object, to prevent jitter
+        #selected_object is the index to the selected target
+        #new_object_flag is true if this is the first frame for a new object
+
+        #logic:
+        # if this is a new object, try to get an ID
+        # if unknown, keep trying until you get it
+
+        #toggle the ID_unknown flag to True if this is a different target
         if (new_object_flag==True):
+            ID_unknown=True       
+
+        if (conf["enable_face_ID"] and ID_unknown==True):
+            #print ("Attempting face id on target ", selected_object)
             #define the box in the coordinates needed by the recognizer
-            (startX, startY, endX, endY) = (l,t,r,b)
+
+            #(startX, startY, endX, endY) = (l,t,r,b)
             #create an image chip of the face
-            face = frame[startY:endY, startX:endX]
+            #face = frame[startY:endY, startX:endX]
             #get the image height and width
+
+            #10/26 - use the full frame chipout that was created in the landmark routine, above
             (fH, fW) = face.shape[:2]
             
             #Set the pointer to 999 as a default
@@ -457,7 +572,7 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
                 faceBlob = cv2.dnn.blobFromImage(face, 1.0 / 255, (96, 96),
                     (0, 0, 0), swapRB=True, crop=False)
                 embedder.setInput(faceBlob)
-                print("embedder set up with blob")
+                #print("face ID embedder set up with blob")
                 vec = embedder.forward()
 
                 # perform classification to recognize the face
@@ -474,15 +589,19 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
                     if (name=="Randy"): ID_object=4
                     if (name=="Ed"):    ID_object=5
                     if (name=="Rick"):  ID_object=6
-                #sprint (ID_object)
-  
+                
+                #if we got an ID, set the the ID_unknown flag to false
+                if ID_object<999:
+                    ID_unknown=False
+                    new_object_flag=False
+
                 # put the name and probablity on the frame
                 # if proba>conf["recognizer_threshold"]:
                 #     text = "{}: {:.2f}%".format(name, proba * 100)      
                 #     cv2.putText(frame, text, (startX-20, endY+30),cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 0),2)
                 #     print (text)
 
-            new_object_flag=False
+        
             facerecognitiontime=time.time()-starttime  - objectprocttime
 
 
@@ -491,34 +610,27 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
 
     # set the servo target using a pseudo moving average 
     #TODO investigate a PID instead of the moving average
-    alpha2 = 0.2  # this is the moving average alpha
-    servo_x = (1-alpha2)*servo_x + alpha2*target_x
-    servo_y = (1-alpha2)*servo_y + alpha2*target_y
+    #alpha2 = 0.2  # this is the moving average alpha
+    #servo_x = (1-alpha2)*servo_x + alpha2*target_x
+    #servo_y = (1-alpha2)*servo_y + alpha2*target_y
+    # 10/25/20  added a slewing function to arduino, no need for moving average calculation here
+    servo_x=target_x  #left/right pointing
+    servo_y=target_y   # up/down pointing
 
     ###########   Calculate servo pointing commands based on the target   #############
 
     # Convert servo_x and servo_y to servo command positions.
 
-    # convert from pixels to servo angle commands
-    # servo_x is in pixels, 0 to proc_w  (processing_width)
-    # servo_y is in pixels, 0 (top) to proc_h (bottom)
-
     # full range of the camera, after de-distortion
     x_fov = conf["camera_fov"]  # camera x field of view, in degrees
     y_fov = 90   # camera y field of view, in degrees
-
-    # servo_x and y, represented as an angle +/- from the center of the image
-    # pointx and y represent the servo commands
-    # servo_1 is the x value (up and down)
-    # servo_2 is the y value  (left and right) - this is NOT quite a linear angle mapping
-        # TODO - change this mapping to reflect the sine of angle, not the angle.
 
     # convert to center ref =  units are now -proc_w/2 to proc_w/2
     servo_x1 = -(servo_x-proc_w/2)
     # convert to angle based on FOV of the camera, from the center of the camera
     servo_x2 = servo_x1*x_fov/proc_w
     servo_x3 = servo_x2*sx_scale       # convert to servo angle
-    pointx = int(-servo_x3 + sx_center)  # add offset for the servo center position
+    pointx = int(servo_x3 + sx_center)  # add offset for the servo center position
 
     servo_y1=-(servo_y-proc_h/2)
     servo_y2=servo_y1*y_fov/proc_h
@@ -533,6 +645,17 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     if pointx>x_max: pointx=x_max
     if pointy<y_min: pointy=y_min
     if pointy>y_max: pointy=y_max
+
+    #set Trex jaw servo to match mouth opening of the person.
+    # mouth_open and mouth_closed are the servo min/max.
+    # mouth_opening is the detected opening from the facial feature as a percentage of the face height.
+    #   range is 0 to 12 since the servo range is about the same as the mouth opening range
+
+    mo=conf["mouth_open"]      #nominally servo = 77
+    mc=conf["mouth_closed"]    #nominally server = 90  
+    mouth_pos= int (mc - mouth_opening)
+    mouth_pos=max(mo,min(mouth_pos,mc))
+    #print(mouth_pos)
     
     ###################    Manage the roar and audio play routine  #######################
 
@@ -591,8 +714,8 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
         # test to see if this is a new face ID
         if (ID_object!=last_selected_object):
             #test to see if we have responded to this ID recently
-            if (time.time()-ID_timer[ID_object]) > ID_downtime  :
-                print("playing audio for ", ID_object, time.time()-ID_timer[ID_object])
+            if (time.time()-ID_timer[ID_object]) > ID_downtime  and ID_object<999:
+                print("playing audio for face ID ", ID_object, time.time()-ID_timer[ID_object])
                 if(ID_object==1): 
                     play_obj.stop()
                     wave_obj = sa.WaveObject.from_wave_file(conf["jeff_roar"])
@@ -619,12 +742,12 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
                     play_obj = wave_obj.play()        
             ID_timer[ID_object]=time.time()
                 
-
     # write the command values to the arduino.
     if(skipflag==0):
-        commandecho=myRexCommand.update(pointx, pointy, mouth_pos, eye_cmd,tilt_servo)     
+        commandecho=myRexCommand.update(pointx, pointy, mouth_pos, eye_cmd,tilt_servo)    
+        #print(tilt_servo) 
     #DEBUG
-    print(commandecho)
+        print(commandecho)
 
     ############    Create the Output Display  ################
 
@@ -634,12 +757,16 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     start_time=time.time()
     palmproctime=myPalmDetector.get_proctime()
 
-    text =  "Frame (FPS)       {:05.2f}".format(frametime)
-    text1 = "Face Detector(ms)  {:05.02f}".format(detproctime*1000)
-    text4 = "Palm Detector(ms)  {:05.02f}".format(palmproctime*1000)
+    text =  "Frame (FPS)       {:03.0f}".format(frametime)
+    text1 = "Face Detector(ms)  {:03.0f}".format(detproctime*1000)
+    text4 = "Palm Detector(ms)  {:03.0f}".format(palmproctime*1000)
     text5 = "Hands             {:03.1f}".format(num_palms)
     text6=  "Eye angle         {:03.1f}".format(eye_angle)
-    text7=  "Face ID time (ms)  {:05.02f}".format(facerecognitiontime*1000)
+    text7=  "Face ID time (ms)  {:03.0f}".format(facerecognitiontime*1000)
+    framemetric= myFrameCapture.getCaptureTime()
+    if (framemetric==0):
+        framemetric==999
+    text8=  "Frame Capture (Hz)  {:03.0f}".format(int(1/(framemetric+0.001)))
 
     cv2.putText(frame, text, (10, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2) 
     cv2.putText(frame, text1, (10, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)        
@@ -647,6 +774,7 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     cv2.putText(frame, text5, (10, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
     cv2.putText(frame, text6, (10, 95), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
     cv2.putText(frame, text7, (10, 115), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+    cv2.putText(frame, text8, (10, 135), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
 
     if (num_palms>=2):
         text = "HANDS {:03.1f}".format(num_palms)
@@ -657,6 +785,8 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     #cv2.putText(frame, text, (10, 30),
     #        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
 
+    ########################       DRAW the detectinos, and the selected object  ################
+
     for (objectID, centroid) in objects.items():
         cx=xlist[objectID]
         cy=ylist[objectID]
@@ -665,8 +795,7 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
         cv2.rectangle(frame, (start_x[objectID], start_y[objectID]), (end_x[objectID], end_y[objectID]), (0,0,255), 2)
 
         text = "ID {}".format(objectID)
-        cv2.putText(frame, text, (cx - 20, cy - 20),
-            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
+        cv2.putText(frame, text, (cx - 20, cy - 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
 
         #cv2.circle(frame, (cx,cy), 4, (0, 255, 0), -1)
 
@@ -676,14 +805,14 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
         # make the objectID text black if low interest, and red if high interest
         if interest[objectID] < 200:  #black
             g1 = 0
-            b1 = 0
-            r1 = 0
+            b1 = 255
+            r1 = 255
         else:   #red
             g1 = 0
             b1 = 0
             r1 = 255
 
-        cv2.putText(frame, text, (cx - 50, cy - -30),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (g1, b1, r1), 2)
+        cv2.putText(frame, text, (cx - 50, cy - -50),cv2.FONT_HERSHEY_SIMPLEX, 0.5, (g1, b1, r1), 2)
 
         # draw the area of all of the boxes
         #area[objectID]= (end_x[objectID]-start_x[objectID])*(end_y[objectID]-start_y[objectID])
@@ -697,13 +826,14 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     cv2.circle(frame, (int(servo_x), int(servo_y)), 8, (0, 0, 255), -1)
 
     #draw detected palm boxes
+    #as of 10/18/20, the palm frame is 1/2 the size of the regular frame
     for (x,y,x2,y2) in palmrects:
-        cv2.rectangle(frame, (x, y), (x2, y2), (0,255,255), 2)
+        cv2.rectangle(frame, (x*2, y*2), (x2*2, y2*2), (0,255,255), 2)
 
     # if there are detections, display the face box and other graphics
     if(len(current_list)>0):
         # show the selected box in a different color
-        cv2.rectangle(frame, (start_x[selected_object], start_y[selected_object]), (end_x[selected_object], end_y[selected_object]), (255,0,255), 1)
+        #cv2.rectangle(frame, (start_x[selected_object], start_y[selected_object]), (end_x[selected_object], end_y[selected_object]), (255,0,255), 1)
 
         #display the face landmarks on the selected face
         #for (x, y) in shape:
@@ -712,26 +842,24 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
         #display the line between the eyes
         thickness=4
         #print("drawing right eye ", rightEyeCenter, leftEyeCenter)
-        cv2.line(frame, (rightEyeCenter[0],rightEyeCenter[1]),(leftEyeCenter[0],leftEyeCenter[1]),(255,255,0) , thickness) 
-
+        #the raw points are in the fullframe scale, and have to be adjusted to the working frame size
+        cv2.line(frame, (int(rightEyeCenter[0]*scale),int(rightEyeCenter[1]*scale)),(int(leftEyeCenter[0]*scale),int(leftEyeCenter[1]*scale)),(255,255,0) , 1) 
+        
         #display the recognition ID
-        if (ID_object==999): 
-            name="Unknown"
-            proba=0
-        if (ID_object==1): name="Jeff"
-        if (ID_object==2): name="Kathy"
-        if (ID_object==3): name="David"
-        if (ID_object==4): name="Randy"
-        if (ID_object==5): name="Ed"
-        if (ID_object==6): name="Rick"
+        if conf["enable_face_ID"]:
+            if (ID_object==999): 
+                name="Unknown"
+                proba=0
+            if (ID_object==1): name="Jeff"
+            if (ID_object==2): name="Kathy"
+            if (ID_object==3): name="David"
+            if (ID_object==4): name="Randy"
+            if (ID_object==5): name="Ed"
+            if (ID_object==6): name="Rick"
             
-        text = "{}: {:.2f}%".format(name, proba * 100)      
-        cv2.putText(frame, text, (start_x[selected_object], start_y[selected_object]), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2) 
-        #print (text)
-
-
-
-
+            text = "{}: {:.2f}%".format(name, proba * 100)      
+            cv2.putText(frame, text, (start_x[selected_object], start_y[selected_object]), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2) 
+            #print (text)
 
     # display the servo scale data
     #text = "Servo: xy scale xy center {:03.1f} {:03.1f} {:03.0f} {:03.0f} ".format(sx_scale, sy_scale, sx_center, sy_center)
@@ -740,6 +868,8 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
             
     # display the image in the frame initialized above
     cv2.imshow(winname, frame)
+    #cv2.imshow("fullframe", fullframe)
+    #cv2.imshow("smallframe",palmgray)
 
     if(conf["output_video"]):
         # Write the frame into the file 'output.avi'  needs to be in BGR
@@ -771,8 +901,23 @@ myFrameCapture.stop()
 #myPlayAudio.stop()
 
 #reset head to neutral position
+# 10/24/20 - slew the servos to the neutral position instead of a single command
 if skipflag==0:
-    commandecho=myRexCommand.update(90, 90, 90, 0, 0)
+    # step=20
+    # for i in range(0, step):
+    #     slewx=int(pointx+ i*(90-pointx)/step)
+    #     slewy=int(pointy+ i*(90-pointy)/step)
+    #     slewmouth=int(mouth_pos+ i*(90-mouth_pos)/step)
+    #     slewtilt =int(tilt_servo+ i*(90-tilt_servo)/step)
+
+    #     commandecho=myRexCommand.update(slewx, slewy, slewmouth, 0,slewtilt)    
+    #     print("slew to neutral ", step, " ", commandecho) 
+    #     time.sleep(2/step)
+
+    #10/25/20 - added slew function in arduino, and we don't need the above slew anymore
+    commandecho=myRexCommand.update(90, 90, 90, 0, 90)
+
+    
 
 if(conf["output_video"]):
     sleep(0.5) 

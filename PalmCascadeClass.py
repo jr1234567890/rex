@@ -13,7 +13,6 @@ class PalmCascade:
 		self.palm_cascade = cv2.CascadeClassifier('palm_v4.xml')
 		#self.face_cascade = cv2.CascadeClassifier('palm_v4.xml')
 		
-		
 		self.stopped = False
 		self.frame=dummyframe
 		self.rects=[]

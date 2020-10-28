@@ -11,6 +11,8 @@ import sys
 import json
 #import numpy as np
 import imutils
+import platform   # for platform.system() to get the OS name
+
 
 #USB Camera set/get indices
 # 0. CV_CAP_PROP_POS_MSEC Current position of the video file in milliseconds.
@@ -44,7 +46,18 @@ class FrameCapture:
         self.flip=conf["180flip"]
         self.fisheye=conf["fisheye"]
         self.proc_w=conf["processing_width"]
-        res=conf["resolution"]
+        res=conf["resolution"]        #the desired resolution of the camera
+        self.xcrop=conf["x_crop"]     #the number of pixels to crop off the left and right
+        self.ycrop=conf["y_crop"]     #the number of pixels to crop off the top and bottom
+        #self.xscale=1.0
+        #self.yscale=1.0
+        self.fullheight=1
+        self.fullwidth=1
+        self.proc_h = 1
+        self.scale=1.0
+        self.framecapturerate=25  #framerate, nominally 25, but could be 29.97
+        self.there_is_a_new_frame=True
+
         #print (res)
 
         #use test video if the config file parameter is true
@@ -61,24 +74,32 @@ class FrameCapture:
             #best settings seem to be to capture with 1920x1080 and scale down
             # if both x and y (index 3 and 4) are not correct, it will default to 640x480
 
-            
+            #use the platform.system() call to identify the OS< and use the appropriate CV capture routine
+            print (platform.system())
 
-            if (conf["linux"]):
+            if (platform.system()=="Linux"):
+                #this is the RPi/RPi
                 self.myframe = cv2.VideoCapture(0)
             else:
+                #this is Windows
                 self.myframe = cv2.VideoCapture(0 , cv2.CAP_DSHOW)
                 #cv2.CAP_DSHOW is a Windows option; added to get rid of black side bars on Arducam b0203 camera
-            self.myframe.set(3,res[0])
+
+            #set the webcam resolution and framerate
+            self.myframe.set(3,res[0])   
             self.myframe.set(4,res[1])    
-            self.myframe.set(5,25)   
+            self.myframe.set(5,self.framecapturerate)      #framerate, nominally 25, but could be 29.97
             #self.myframe.set(15, 0.1)  #exposure
-            self.myframe.set(cv2.CAP_PROP_FOURCC,cv2.VideoWriter_fourcc('M','J','P','G'))
+
+            #This works on the RPi webcam and the PC ball web cam
+            #self.myframe.set(cv2.CAP_PROP_FOURCC,cv2.VideoWriter_fourcc('M','J','P','G'))
 
             # this does not work on the Arducam
             #self.myframe.set(cv2.CAP_PROP_FOURCC,cv2.VideoWriter_fourcc('H','2','6','4'))
 
-        for i in range (0,47):
-            print(i, self.myframe.get(i))
+            #DEBUG: #print camera parameters
+            #for i in range (0,47):  
+            #    print(i, self.myframe.get(i))
         
         # ret, frame = self.myframe.read()
         # self.frame = self.frame[self.ycrop:self.y-self.ycrop, self.xcrop:self.x-self.xcrop]
@@ -86,18 +107,18 @@ class FrameCapture:
  #       self.frame = cv2.resize(self.frame, (self.proc_w, self.proc_h))
        
         #grab a frame so we can figure out the scales
-        (self.grabbed, self.frame) = self.myframe.read()
-        height, width, channels = self.frame.shape  #this is the shape of the raw image
-        self.y=height
-        self.x=width
-        #print ("frame resolution from camera query ", self.x, self.y)
-        fps=self.myframe.get(5)
-        print ("FrameGrabber Original image h, w, channels, FPS ", height, width, channels, fps)
+        #(self.grabbed, self.frame) = self.myframe.read()
+        #height, width, channels = self.frame.shape  #this is the shape of the raw image
+        #self.y=height
+        #self.x=width
+        #print ("FrameGrabber: resolution from first camera query ", self.x, self.y)
+        #fps=self.myframe.get(5)
+        #print ("FrameGrabber initial image w, h, channels, FPS ", width, height, channels, fps)
 
-        self.scale=self.proc_w/width  #this is the overall scaling as we reduce to the proc_w width
-        self.proc_h = int(height*self.scale-2*self.ycrop)
+        #self.scale=self.proc_w/width  #this is the overall scaling as we reduce to the proc_w width
+        #self.proc_h = int(height*self.scale-2*self.ycrop)
 
-        print("Initializing FrameGrabber to w, h, scale", self.proc_w, self.proc_h, self.scale)
+        #print("FrameGrabber Initializing to w, h, scale", self.proc_w, self.proc_h, self.scale)
 
         #self.frame = cv2.resize(frame, (self.proc_w, self.proc_h))
 
@@ -116,11 +137,36 @@ class FrameCapture:
         # enums for webcam get and set functions
         # 3 Width, 4 Height, 5 FPS, 6 codec , 10 bright, 11 contrast, 12 saturation, 13  hue, 14 gain, 15 exposure
 
-        #this is a dummy grab to end the setup.  It will not be used
-        (self.grabbed, self.frame) = self.myframe.read()
-        #self.frame = self.frame[self.ycrop:self.y-self.ycrop, self.xcrop:self.x-self.xcrop]
-        self.frame = cv2.resize(self.frame, (self.proc_w, self.proc_h))
+        #this is a dummy grab to end the setup.  It will be used to calculate frame sizes
+        (self.grabbed, self.framefull) = self.myframe.read()
+        self.fullheight, self.fullwidth, channels = self.framefull.shape  #this is the shape of the raw image
+        self.framefull = self.framefull[self.ycrop:self.fullheight-self.ycrop, self.xcrop:self.fullwidth-self.xcrop]
+        self.fullheight, self.fullwidth, channels = self.framefull.shape  #this is the shape of the cropped image
+        print ("FrameGrabber Raw image after setting resolution and cropping ", self.fullwidth, self.fullheight)
 
+        #calculate the desired height of the processing frame, keeping the same scale
+        self.scale=self.proc_w/self.fullwidth
+        self.proc_h=int(self.fullheight*self.scale)
+        #print(self.proc_w, self.proc_h,self.scale)
+        #self.proc_h=int(self.fullwidth*(self.proc_w/self.fullheight))
+
+        # create the working frame
+        self.frame = cv2.resize(self.framefull, (self.proc_w, self.proc_h))
+        height, width, channels = self.frame.shape  #this is the shape of the  image
+        print ("FrameGrabber resized image", width, height)
+
+        #make an initial small grayframe to initialize the structure
+        temp2 = cv2.resize(self.frame, (int(self.proc_w/2), int(self.proc_h/2)))
+        #temp2 = cv2.resize(self.frame, (320,240))
+        self.framesmall = cv2.cvtColor(temp2, cv2.COLOR_BGR2GRAY)
+
+        #set the flag that there is a new frame available
+        self.there_is_a_new_frame=True
+
+       #self.xscale=width/self.fullwidth
+       # self.yscale=height/self.fullheight
+        #self.proc_h = int(height*self.scale-2*self.ycrop)
+       
         #cv2.imshow('raw image', self.frame)
 
         # #set the webcam resolution
@@ -137,11 +183,10 @@ class FrameCapture:
  
     def update(self):
         
-        #time.sleep(1)
-
+        time.sleep(5)  #let the initialization finish
         lastframetime = time.time()  #set up frame grabber timer
 
-        print("Frame update thread started")
+        print("Framegrabber: Frame update thread started")
     
         # keep looping infinitely until the thread is stopped
         while True:
@@ -151,28 +196,39 @@ class FrameCapture:
         
             #sleep until it is time for a new frame
 
-            framerate=30
-            currenttime=time.time()-lastframetime
-            sleeptime= 1/framerate-currenttime
+            #framerate=self.framecapturerate
+            self.capturetime=time.time()-lastframetime
+            currenttime=self.capturetime
+            
 
+            #if the framerate is too fast, this will slow it down
+            sleeptime= .03-currenttime
+            #print (sleeptime*1000)
             if (sleeptime>0):           
                 time.sleep(sleeptime)
-            #get the next frame
-            (self.grabbed, temp) = self.myframe.read()
-
-            
-            #crop it
-            temp = temp[self.ycrop:self.y-self.ycrop, self.xcrop:self.x-self.xcrop]
-            #scale it
-            self.frame = cv2.resize(temp, (self.proc_w, self.proc_h))
-
+            #print((time.time()-lastframetime)*1000)
             lastframetime=time.time()
+            #get the next frame
+
+            (self.grabbed, self.framefull) = self.myframe.read()
+
+            #crop it
+            self.framefull = self.framefull[self.ycrop:self.fullheight-self.ycrop, self.xcrop:self.fullwidth-self.xcrop]
+
+            #scale it
+            #self.frame = cv2.resize(self.framefull, (500, 375))
+            self.frame = cv2.resize(self.framefull, (int(self.proc_w), int(self.proc_h)))
+            
+            #make a small grayframe to speed up some recognizers
+            temp2 = cv2.resize(self.frame, (int(self.proc_w/2), int(self.proc_h/2)))
+            #temp2 = cv2.resize(self.frame, (320,240))
+            self.framesmall = cv2.cvtColor(temp2, cv2.COLOR_BGR2GRAY)
      
             # 180 deg rotation using cv2.flip
             if (self.flip):
                 frame = cv2.flip(myframe, -1)
 
-            
+          
             # # apply fisheye undistort mapping
             #     if (self.fisheye):
             #         print("applying fisheye")
@@ -202,14 +258,22 @@ class FrameCapture:
             #self.frame = imutils.resize(self.frame, width="640")
             #print("after size", sys.getsizeof(self.frame))
            #print("numpy size", self.frame.shape)
+
+
+
     
     def getFrame(self):
-        # return the frame most recently read
-        #temp=sys.getsizeof(self.frame)
-        #print("sending frame", temp)
-        #print(self.myframe.shape)
-        #print("Frame sent")
+        # return the frame most recently read and reset the "new frame" flag
+        there_is_a_new_frame=False
         return self.frame
+
+    def getFrameSmall(self):
+        # return the small frame, for use by the hand recognizer
+        return self.framesmall
+
+    def getFrameFull(self):
+        # return the original frame for use by landmarks and face recognizer
+        return self.framefull
  
     def getSize(self):
         # return the frame size recently read
@@ -220,6 +284,18 @@ class FrameCapture:
         mysize=[x, y]
         #print("sending size")
         return mysize
+
+    def getScale(self):
+        # return the scale from full size to working size frames
+        return self.scale
+
+    def getCaptureTime(self):
+        # return the scale from full size to working size frames
+        return self.capturetime
+
+    def getNewFrameStatus(self):
+        # return the scale from full size to working size frames
+        return self.there_is_a_new_frame
 
     def stop(self):
         # indicate that the thread should be stopped

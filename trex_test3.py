@@ -16,7 +16,7 @@
 
 import sys
 import serial  # needed for pyserial interface to arduino
-import msvcrt
+#import msvcrt
 import time
 from time import sleep
 import warnings
@@ -36,8 +36,13 @@ import serial.tools.list_ports
 arduino_ports = [
     p.device
     for p in serial.tools.list_ports.comports()
-    if 'COM' in p.description  # may need tweaking to match new arduinos
+	#for windows
+    #if 'COM' in p.description  # may need tweaking to match new arduinos
+	#for linux
+	if 'Arduino' in p.description  # may need tweaking to match new arduinos
 ]
+#print(arduino_ports)
+
 if not arduino_ports:
     raise IOError("No Arduino found")
 if len(arduino_ports) > 1:

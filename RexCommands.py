@@ -15,6 +15,8 @@ import serial
 # imports specific to centroid tracker
 import numpy as np
 import dlib
+import platform   # for platform.system() to get the OS name
+
 
 # import ComArduinoFunctions
 # waitForArduino() Waits for startup and prints message
@@ -35,9 +37,39 @@ class RexCommand:
         self.skipflag=0
         self.waitingForReply=0
 
-        if conf["linux"]==True:
+
+#this is from trex_test3.py
+# #find com port with the text "Arduino" in the port description
+# arduino_ports = [
+#     p.device
+#     for p in serial.tools.list_ports.comports()
+# 	#for windows
+#     #if 'COM' in p.description  # may need tweaking to match new arduinos
+# 	#for linux
+# 	if 'Arduino' in p.description  # may need tweaking to match new arduinos
+# ]
+# #print(arduino_ports)
+
+# if not arduino_ports:
+#     raise IOError("No Arduino found")
+# if len(arduino_ports) > 1:
+#     warnings.warn('Multiple Arduinos found - using the first')
+
+# #connect to Arduino 	9200, 2880, 2840, 57600, 115200
+# baudRate = 57600
+# ser = serial.Serial(arduino_ports[0],baudRate)
+# print ("Serial port " + arduino_ports[0] + " opened  Baudrate " + str(baudRate))
+
+
+
+
+        if (platform.system()=="Linux"):  #see if it's Linux
+        #if conf["linux"]==True:
             ser = serial.Serial("/dev/ttyACM0", conf["arduino_baud_rate"])
             print("Linux Serial port set up with baud rate:", conf["arduino_baud_rate"])
+
+
+
 
         else:  #else, set up the Windows com port     
             ser = serial.Serial(conf["win_arduino_port"],conf["arduino_baud_rate"])
@@ -55,15 +87,14 @@ class RexCommand:
         self.y_max = conf["sy_max"]  # up
       
 
-
-
-    def update(self,x,y,jaw,roll,eye):
+    def update(self,x,y,jaw,eye,tilt):
          # write the servo value to the arduino.
-        # data format for serial interface to arduino is "SERVO5" and 5 integers: x, y, mouth, roll, eyes
+        # data format for serial interface to arduino is "SERVO5" and 5 integers: 
+            #x, y, mouth, eye on/off command and head tilt
         
         ser=self.ser
 
-        arduino_string= "<SERVO5," + str(x) + "," + str(y) + "," + str(jaw) + "," + str(roll) + "," + str(eye) + ">"
+        arduino_string= "<SERVO5," + str(x) + "," + str(y) + "," + str(jaw) + "," + str(eye) + "," + str(tilt) + ">"
 
         #skip the serial write if the arduino is not connected, skipflag==1
         if self.skipflag==0:
@@ -81,6 +112,6 @@ class RexCommand:
         else:  #else this is a test config without an arduino present, and we just wrap the input
             dataRecvd = arduino_string
       
-        # return the set of trackable objects
-        print (data_received)
-        return data_received
+        # return the echo from the arduino
+        #print  (dataRecvd)
+        return (dataRecvd)
