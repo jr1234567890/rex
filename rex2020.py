@@ -206,6 +206,9 @@ i_see_nothing_activation_timer=time.time()
 pointx = 90
 pointy = 90
 eye_angle=0
+mypointx=90  #an extra x pointer for a side to side motion
+xtimer=time.time()  #the timer for the side to side motion
+x_inc=1 # the increment to move the head, per time increment for side to side motin
 
 ############         Initialize the face recognition function
 if conf["enable_face_ID"]:
@@ -248,6 +251,7 @@ objectprocttime=0
 
 while(True):  # replace with some kind of test to see if WebcamStream is still active?
 
+    # this was added to slow down the frame capture, but was replaced with the "wait until a frame is ready", when I realized the frame capture rate was slower than the camera rate
     # while(time.time()-looptime<(1/15)):
     #     sleep(0.001)
     # looptime=time.time()    
@@ -742,9 +746,20 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
                     play_obj = wave_obj.play()        
             ID_timer[ID_object]=time.time()
                 
+    #avoid staring straight ahead to knock down the resonance
+    # add and subtract 1 degree every now and then
+    if mypointx!=90:
+        mypointx=pointx
+    else:
+        if time.time()-xtimer>250:  #the time increment for an update
+            mypointx=mypointx+x_inc  #increment the pointer
+        if mypointx>10 or mypointx<10:  #flip the inc value at the max or min
+            x_inc=-x_inc
+            
+
     # write the command values to the arduino.
     if(skipflag==0):
-        commandecho=myRexCommand.update(pointx, pointy, mouth_pos, eye_cmd,tilt_servo)    
+        commandecho=myRexCommand.update(mypointx, pointy, mouth_pos, eye_cmd,tilt_servo)    
         #print(tilt_servo) 
     #DEBUG
         print(commandecho)
