@@ -137,6 +137,7 @@ ID_object=999           #initialize the pointer to the selected face ID
 
 ID_downtime=5   #the time between playing songs for any one person
 ID_timer = [0]*1000  #set up a timer for each person
+ID_unknown=True   
 
 # initiate lists.  yes, I know I should not use static declarations - TODO - change to dynamic later
 oldx = [250] * 10000
@@ -718,7 +719,7 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
                 print("playing audio for face ID ", ID_object, time.time()-ID_timer[ID_object])
                 if(ID_object==1): 
                     play_obj.stop()
-                    wave_obj = sa.WaveObject.from_wave_file(conf["jeff_roar"])
+                    wave_obj = sa.WaveObject.from_wave_file(conf["randy_roar"])
                     play_obj = wave_obj.play() 
                 if(ID_object==2): 
                     play_obj.stop()
