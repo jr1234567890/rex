@@ -42,13 +42,13 @@ class PlayAudio:
         # start the music track based on the number of hands seen
         if (num_palms<3):
             print("starting roar audio")
-            playsound('t-rex_roar.mp3')                
+            playsound('audio/t-rex_roar.mp3')                
         elif(num_palms<5):
             print("starting barney audio")
-            playsound('barney.wav')       
+            playsound('audio/barney.wav')       
         else:
             print("starting frog audio")
-            playsound('frog.wav')  
+            playsound('audio/frog.wav')  
         return
 
 

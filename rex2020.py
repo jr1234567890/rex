@@ -130,6 +130,7 @@ ID_object=999           #initialize the pointer to the selected face ID
 
 ID_downtime=5   #the time between playing songs for any one person
 ID_timer = [0]*1000  #set up a timer for each person
+ID_unknown=True   
 
 # initiate lists.  yes, I know I should not use static declarations - TODO - change to dynamic later
 oldx = [250] * 10000
@@ -673,7 +674,7 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
 
         #play_obj.stop()  #this may not be necessary
         play_obj.stop()
-        wave_obj = sa.WaveObject.from_wave_file(conf["trex_roar"])
+        wave_obj = sa.WaveObject.from_wave_file(conf["audio/trex_roar"])
         play_obj = wave_obj.play()       
 
         #myPlayAudio.launch(num_palms)  #launch the audio player based on the number of hands
@@ -690,7 +691,7 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
         if (roar_special_flag==0) and num_palms>=conf["hands_for_special_roar"] :
             print ("special roar triggered with hands = ", num_palms)
             play_obj.stop()
-            wave_obj = sa.WaveObject.from_wave_file(conf["trex_special_roar"])
+            wave_obj = sa.WaveObject.from_wave_file(conf["audio/trex_special_roar"])
             play_obj = wave_obj.play()  
             roar_special_flag=1
 

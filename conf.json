@@ -1,6 +1,6 @@
 {
 
-	"arduino": false,
+	"arduino": true,
 	"use_test_video": false,
 	"output_video": false,
 	"enable_face_ID": true,
@@ -40,6 +40,7 @@
 	"face_dwell":5,
 	"hands_for_roar": 2,
 	"hands_for_special_roar": 3,
+<<<<<<< HEAD
 	"start_sound": "aud_Cat-purring-sound-4-sec.wav",
 	"trex_roar":"aud_trex_roar.wav",
 	"trex_special_roar":"aud_barney.wav",
@@ -50,6 +51,19 @@
 	"randy_roar":"aud_human-heartbeat-daniel_simon.wav",
 	"ed_roar":"aud_daffy_despicable.wav",
 	"rick_roar":"aud_yosemite_toads.wav",
+=======
+	"start_sound": "Cat-purring-sound-4-sec.wav",
+	"trex_roar":"trex_roar.wav",
+	"trex_special_roar":"barney.wav",
+	"jeff_roar2":"Purring-SoundBible.com-1561515931.wav",
+	"jeff_roar3":"Cat-purring-sound-4-sec.wav",
+	"jeff_roar":"daffy_despicable.",
+	"kathy_roar":"Cat2.wav",
+	"david_roar":"frog.wav",
+	"randy_roar":"human-heartbeat-daniel_simon.wav",
+	"ed_roar":"daffy_despicable.wav",
+	"rick_roar":"yosemite_toads.wav",
+>>>>>>> 80fb09b9cca214f981a62ca9ecec4829bb5d53b9
 	"tilt_ratio":  2.5,
 	"max_tilt": 30,
 	"dummy_end_of_list_so_I_don't_worry_about_commas": 0
