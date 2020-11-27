@@ -232,7 +232,7 @@ if conf["enable_face_ID"]:
     le = pickle.loads(open(le_name, "rb").read())
 
 #initialize the audio
-wave_obj = sa.WaveObject.from_wave_file("Cat-purring-sound-4-sec.wav")
+wave_obj = sa.WaveObject.from_wave_file("audio/Cat-purring-sound-4-sec.wav")
 play_obj = wave_obj.play()
 #play_obj.stop()
 
@@ -681,7 +681,7 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
 
         #play_obj.stop()  #this may not be necessary
         play_obj.stop()
-        wave_obj = sa.WaveObject.from_wave_file(conf["trex_roar"])
+        wave_obj = sa.WaveObject.from_wave_file(conf["audio/trex_roar"])
         play_obj = wave_obj.play()       
 
         #myPlayAudio.launch(num_palms)  #launch the audio player based on the number of hands
@@ -698,7 +698,7 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
         if (roar_special_flag==0) and num_palms>=conf["hands_for_special_roar"] :
             print ("special roar triggered with hands = ", num_palms)
             play_obj.stop()
-            wave_obj = sa.WaveObject.from_wave_file(conf["trex_special_roar"])
+            wave_obj = sa.WaveObject.from_wave_file(conf["audio/trex_special_roar"])
             play_obj = wave_obj.play()  
             roar_special_flag=1
         
@@ -723,27 +723,27 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
                 print("playing audio for face ID ", ID_object, time.time()-ID_timer[ID_object])
                 if(ID_object==1): 
                     play_obj.stop()
-                    wave_obj = sa.WaveObject.from_wave_file(conf["randy_roar"])
+                    wave_obj = sa.WaveObject.from_wave_file("audio/" + conf["jeff_roar"])
                     play_obj = wave_obj.play() 
                 if(ID_object==2): 
                     play_obj.stop()
-                    wave_obj = sa.WaveObject.from_wave_file(conf["kathy_roar"])
+                    wave_obj = sa.WaveObject.from_wave_file("audio/" + conf["kathy_roar"])
                     play_obj = wave_obj.play() 
                 if(ID_object==3): 
                     play_obj.stop()
-                    wave_obj = sa.WaveObject.from_wave_file(conf["david_roar"])
+                    wave_obj = sa.WaveObject.from_wave_file("audio/" + conf["david_roar"])
                     play_obj = wave_obj.play() 
                 if(ID_object==4): 
                     play_obj.stop()
-                    wave_obj = sa.WaveObject.from_wave_file(conf["randy_roar"])
+                    wave_obj = sa.WaveObject.from_wave_file("audio/" + conf["randy_roar"])
                     play_obj = wave_obj.play() 
                 if(ID_object==5): 
                     play_obj.stop()
-                    wave_obj = sa.WaveObject.from_wave_file(conf["ed_roar"])
+                    wave_obj = sa.WaveObject.from_wave_file("audio/" + conf["ed_roar"])
                     play_obj = wave_obj.play()        
                 if(ID_object==6): 
                     play_obj.stop()
-                    wave_obj = sa.WaveObject.from_wave_file(conf["rick_roar"])
+                    wave_obj = sa.WaveObject.from_wave_file("audio/" + conf["rick_roar"])
                     play_obj = wave_obj.play()        
             ID_timer[ID_object]=time.time()
                 
