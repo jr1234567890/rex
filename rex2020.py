@@ -31,22 +31,16 @@ from sys import exit
 from pyimagesearch.centroidtracker_jr import CentroidTracker
 from pyimagesearch.trackableobject import TrackableObject
 import numpy as np
-#import dlib
-#import warnings
 import serial
-
-# import mp3/wav player
-# from playsound import playsound
 
 # imports specific to threading
 from threading import Thread
 
 #import my functions
-from CVFrameCapture2020 import FrameCapture         # Captures video in a separate thread/core to speed up the main processing rate
-from PalmCascadeClass import PalmCascade            #Detects the number of palms
-from FaceDetectionFunctions import DetectFaces      #The face detector, using HOG, and the Neural net stick
-from RexCommands import RexCommand                  #Sends servo commands to the Arduino using serial port
-#rom AudioPlayerFunctions import PlayAudio          # a threaded audio player, based on # hands seen
+from rex_CVFrameCapture2020 import FrameCapture         # Captures video in a separate thread/core to speed up the main processing rate
+from rex_PalmCascadeClass import PalmCascade            #Detects the number of palms
+from rex_FaceDetectionFunctions import DetectFaces      #The face detector, using HOG, and the Neural net stick
+from rex_ArduinoCommands import RexCommand                  #Sends servo commands to the Arduino using serial port
 
 conf = json.load(open("conf.json"))
 
@@ -56,7 +50,6 @@ if conf["arduino"]==True:
     myRexCommand=RexCommand()    #initialize the RexCommand function
 else:
     skipflag=1   #indicates the arduino is not present, and all commands should be skipped
-
 
 # # Set up servo unit limits
 # # These are determined by testing to be the extents of the servos before they hit a hard stop.
@@ -231,7 +224,7 @@ if conf["enable_face_ID"]:
     le = pickle.loads(open(le_name, "rb").read())
 
 #initialize the audio
-wave_obj = sa.WaveObject.from_wave_file("Cat-purring-sound-4-sec.wav")
+wave_obj = sa.WaveObject.from_wave_file(conf["start_sound"])
 play_obj = wave_obj.play()
 #play_obj.stop()
 
@@ -700,10 +693,6 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
             wave_obj = sa.WaveObject.from_wave_file(conf["trex_special_roar"])
             play_obj = wave_obj.play()  
             roar_special_flag=1
-        
-        # if (hands==3)and(num_palms>=5):
-        #         myPlayAudio.launch(num_palms)  #launch the audio player based on the number of hands
-        #         hands=5
 
         #if roar time has expired reset servos and flags
         if((time.time()-roar_timer)> roar_duration):         
@@ -722,27 +711,27 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
                 print("playing audio for face ID ", ID_object, time.time()-ID_timer[ID_object])
                 if(ID_object==1): 
                     play_obj.stop()
-                    wave_obj = sa.WaveObject.from_wave_file("audio/" + conf["jeff_roar"])
+                    wave_obj = sa.WaveObject.from_wave_file("conf["jeff_roar"])
                     play_obj = wave_obj.play() 
                 if(ID_object==2): 
                     play_obj.stop()
-                    wave_obj = sa.WaveObject.from_wave_file("audio/" + conf["kathy_roar"])
+                    wave_obj = sa.WaveObject.from_wave_file("conf["kathy_roar"])
                     play_obj = wave_obj.play() 
                 if(ID_object==3): 
                     play_obj.stop()
-                    wave_obj = sa.WaveObject.from_wave_file("audio/" + conf["david_roar"])
+                    wave_obj = sa.WaveObject.from_wave_file("conf["david_roar"])
                     play_obj = wave_obj.play() 
                 if(ID_object==4): 
                     play_obj.stop()
-                    wave_obj = sa.WaveObject.from_wave_file("audio/" + conf["randy_roar"])
+                    wave_obj = sa.WaveObject.from_wave_file("conf["randy_roar"])
                     play_obj = wave_obj.play() 
                 if(ID_object==5): 
                     play_obj.stop()
-                    wave_obj = sa.WaveObject.from_wave_file("audio/" + conf["ed_roar"])
+                    wave_obj = sa.WaveObject.from_wave_file(conf["ed_roar"])
                     play_obj = wave_obj.play()        
                 if(ID_object==6): 
                     play_obj.stop()
-                    wave_obj = sa.WaveObject.from_wave_file("audio/" + conf["rick_roar"])
+                    wave_obj = sa.WaveObject.from_wave_file(conf["rick_roar"])
                     play_obj = wave_obj.play()        
             ID_timer[ID_object]=time.time()
                 
