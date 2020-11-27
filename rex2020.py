@@ -200,8 +200,9 @@ i_see_nothing_activation_timer=time.time()
 pointx = 90
 pointy = 90
 eye_angle=0
-mypointx=90  #an extra x pointer for a side to side motion
+#mypointx=90  #an extra x pointer for a side to side motion
 xtimer=time.time()  #the timer for the side to side motion
+osc_value=0 #an extra x pointer for a side to side motion
 x_inc=1 # the increment to move the head, per time increment for side to side motin
 
 ############         Initialize the face recognition function
@@ -674,7 +675,7 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
 
         #play_obj.stop()  #this may not be necessary
         play_obj.stop()
-        wave_obj = sa.WaveObject.from_wave_file(conf["audio/trex_roar"])
+        wave_obj = sa.WaveObject.from_wave_file(conf["trex_roar"])
         play_obj = wave_obj.play()       
 
         #myPlayAudio.launch(num_palms)  #launch the audio player based on the number of hands
@@ -712,19 +713,19 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
                 print("playing audio for face ID ", ID_object, time.time()-ID_timer[ID_object])
                 if(ID_object==1): 
                     play_obj.stop()
-                    wave_obj = sa.WaveObject.from_wave_file("conf["jeff_roar"])
+                    wave_obj = sa.WaveObject.from_wave_file(conf["jeff_roar"])
                     play_obj = wave_obj.play() 
                 if(ID_object==2): 
                     play_obj.stop()
-                    wave_obj = sa.WaveObject.from_wave_file("conf["kathy_roar"])
+                    wave_obj = sa.WaveObject.from_wave_file(conf["kathy_roar"])
                     play_obj = wave_obj.play() 
                 if(ID_object==3): 
                     play_obj.stop()
-                    wave_obj = sa.WaveObject.from_wave_file("conf["david_roar"])
+                    wave_obj = sa.WaveObject.from_wave_file(conf["david_roar"])
                     play_obj = wave_obj.play() 
                 if(ID_object==4): 
                     play_obj.stop()
-                    wave_obj = sa.WaveObject.from_wave_file("conf["randy_roar"])
+                    wave_obj = sa.WaveObject.from_wave_file(conf["randy_roar"])
                     play_obj = wave_obj.play() 
                 if(ID_object==5): 
                     play_obj.stop()
@@ -736,20 +737,29 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
                     play_obj = wave_obj.play()        
             ID_timer[ID_object]=time.time()
                 
-    #avoid staring straight ahead to knock down the resonance
-    # add and subtract 1 degree every now and then
-    if mypointx!=90:
-        mypointx=pointx
-    else:
-        if time.time()-xtimer>250:  #the time increment for an update
-            mypointx=mypointx+x_inc  #increment the pointer
-        if mypointx>10 or mypointx<10:  #flip the inc value at the max or min
-            x_inc=-x_inc
-            
+    #define an oscillating offset to twiddle the x dimension to avoid an oscillation
+    
+    osc_time=.25
+    osc_limit=5
+
+    if time.time()-xtimer>osc_time:  #the time increment for an update
+        #change the direction if the value is over the limit
+        if osc_value>osc_limit:
+            x_inc=-1
+        if osc_value<-osc_limit:
+            x_inc=1
+        #update the oscillation value
+        osc_value=osc_value+x_inc
+        #reset the timer clock           
+        xtimer=time.time() 
+
+    #if pointing straight ahead, add the oscillation value to the x
+    if(pointx==90):
+        pointx=pointx+osc_value
 
     # write the command values to the arduino.
     if(skipflag==0):
-        commandecho=myRexCommand.update(mypointx, pointy, mouth_pos, eye_cmd,tilt_servo)    
+        commandecho=myRexCommand.update(pointx, pointy, mouth_pos, eye_cmd,tilt_servo)    
         #print(tilt_servo) 
     #DEBUG
         print(commandecho)
