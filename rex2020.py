@@ -722,27 +722,27 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
                 print("playing audio for face ID ", ID_object, time.time()-ID_timer[ID_object])
                 if(ID_object==1): 
                     play_obj.stop()
-                    wave_obj = sa.WaveObject.from_wave_file(conf["jeff_roar"])
+                    wave_obj = sa.WaveObject.from_wave_file("audio/" + conf["jeff_roar"])
                     play_obj = wave_obj.play() 
                 if(ID_object==2): 
                     play_obj.stop()
-                    wave_obj = sa.WaveObject.from_wave_file(conf["kathy_roar"])
+                    wave_obj = sa.WaveObject.from_wave_file("audio/" + conf["kathy_roar"])
                     play_obj = wave_obj.play() 
                 if(ID_object==3): 
                     play_obj.stop()
-                    wave_obj = sa.WaveObject.from_wave_file(conf["david_roar"])
+                    wave_obj = sa.WaveObject.from_wave_file("audio/" + conf["david_roar"])
                     play_obj = wave_obj.play() 
                 if(ID_object==4): 
                     play_obj.stop()
-                    wave_obj = sa.WaveObject.from_wave_file(conf["randy_roar"])
+                    wave_obj = sa.WaveObject.from_wave_file("audio/" + conf["randy_roar"])
                     play_obj = wave_obj.play() 
                 if(ID_object==5): 
                     play_obj.stop()
-                    wave_obj = sa.WaveObject.from_wave_file(conf["ed_roar"])
+                    wave_obj = sa.WaveObject.from_wave_file("audio/" + conf["ed_roar"])
                     play_obj = wave_obj.play()        
                 if(ID_object==6): 
                     play_obj.stop()
-                    wave_obj = sa.WaveObject.from_wave_file(conf["rick_roar"])
+                    wave_obj = sa.WaveObject.from_wave_file("audio/" + conf["rick_roar"])
                     play_obj = wave_obj.play()        
             ID_timer[ID_object]=time.time()
                 
