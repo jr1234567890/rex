@@ -60,21 +60,14 @@ class RexCommand:
 # ser = serial.Serial(arduino_ports[0],baudRate)
 # print ("Serial port " + arduino_ports[0] + " opened  Baudrate " + str(baudRate))
 
-
-
-
         if (platform.system()=="Linux"):  #see if it's Linux
         #if conf["linux"]==True:
             ser = serial.Serial("/dev/ttyACM0", conf["arduino_baud_rate"])
             print("Linux Serial port set up with baud rate:", conf["arduino_baud_rate"])
 
-
-
-
         else:  #else, set up the Windows com port     
             ser = serial.Serial(conf["win_arduino_port"],conf["arduino_baud_rate"])
             print ("Windows serial port " + conf["win_arduino_port"] + " opened  Baudrate ", conf["arduino_baud_rate"])
-
 
         self.ser=ser
 
@@ -87,14 +80,14 @@ class RexCommand:
         self.y_max = conf["sy_max"]  # up
       
 
-    def update(self,x,y,jaw,eye,tilt):
+    def update(self,x,y,jaw,eye,tilt,max_servo_slew):
          # write the servo value to the arduino.
         # data format for serial interface to arduino is "SERVO5" and 5 integers: 
             #x, y, mouth, eye on/off command and head tilt
         
         ser=self.ser
 
-        arduino_string= "<SERVO5," + str(x) + "," + str(y) + "," + str(jaw) + "," + str(eye) + "," + str(tilt) + ">"
+        arduino_string= "<SERVO5," + str(x) + "," + str(y) + "," + str(jaw) + "," + str(eye) + "," + str(tilt) + str(max_servo_slew) + ">"
 
         #skip the serial write if the arduino is not connected, skipflag==1
         if self.skipflag==0:

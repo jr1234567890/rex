@@ -53,5 +53,6 @@
 	"rick_roar":"aud_yosemite_toads.wav",
 	"tilt_ratio":  2.5,
 	"max_tilt": 30,
+	"max_servo_slew": 20,
 	"dummy_end_of_list_so_I_don't_worry_about_commas": 0
 }

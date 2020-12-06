@@ -3,7 +3,7 @@
 
 #Updated to use Intel DNN processing stick, and to move screen capture to a separate thread
  
-# Requires use of arduino running: rex2020r0.ino
+# Requires use of arduino running: rex2020r2.ino
 #
 # assumes the existence of file conf.json
 
@@ -58,6 +58,7 @@ x_min = conf["sx_min"]  # left`
 x_max = conf["sx_max"]  # right
 y_min = conf["sy_min"]  # down
 y_max = conf["sy_max"]  # up
+max_servo_slew= conf["max_servo_slew"]
 
 # set servo center and scale
 # scale multiplies the angle from the camera to match the scale of the servo
@@ -759,7 +760,7 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
 
     # write the command values to the arduino.
     if(skipflag==0):
-        commandecho=myRexCommand.update(pointx, pointy, mouth_pos, eye_cmd,tilt_servo)    
+        commandecho=myRexCommand.update(pointx, pointy, mouth_pos, eye_cmd,tilt_servo,max_servo_slew)    
         #print(tilt_servo) 
     #DEBUG
         print(commandecho)
