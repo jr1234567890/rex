@@ -54,12 +54,10 @@ else:
 # # Set up servo unit limits
 # # These are determined by testing to be the extents of the servos before they hit a hard stop.
 # # They may not be symmetric, but that will be adjusted with the center values below.
-# Note that there are also min/max limits in the arduino code
 x_min = conf["sx_min"]  # left`
 x_max = conf["sx_max"]  # right
 y_min = conf["sy_min"]  # down
 y_max = conf["sy_max"]  # up
-
 max_servo_slew= conf["max_servo_slew"]
 
 # set servo center and scale
@@ -760,10 +758,7 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     if(pointx==90):
         pointx=pointx+osc_value
 
-
-    ##################   Send to Arduino  #############################
-
-    # skip this if the arduino skip flag is set
+    # write the command values to the arduino.
     if(skipflag==0):
         commandecho=myRexCommand.update(pointx, pointy, mouth_pos, eye_cmd,tilt_servo,max_servo_slew)    
         #print(tilt_servo) 
@@ -806,7 +801,7 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     #cv2.putText(frame, text, (10, 30),
     #        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
 
-    ########################       DRAW the detections, and the selected object  ################
+    ########################       DRAW the detectinos, and the selected object  ################
 
     for (objectID, centroid) in objects.items():
         cx=xlist[objectID]
@@ -936,7 +931,7 @@ if skipflag==0:
     #     time.sleep(2/step)
 
     #10/25/20 - added slew function in arduino, and we don't need the above slew anymore
-    commandecho=myRexCommand.update(90, 90, 90, 0, 90,max_servo_slew)
+    commandecho=myRexCommand.update(90, 90, 90, 0, 90)
 
     
 
