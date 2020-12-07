@@ -1,0 +1,19 @@
+{
+
+	"arduino": true,
+	"sx_scale": 1.0,
+	"sy_scale": 1.0,
+	"sx_center": 90,
+	"sy_center": 90,
+	"sx_min":   41,
+	"sx_max":  145,
+	"sy_min":   70, 
+	"sy_max":  145,
+	"mouth_open": 77,
+	"mouth_closed": 90,
+	"win_arduino_port":"COM3",
+	"arduino_baud_rate": 57600,
+	"max_tilt": 30,
+	"max_servo_slew": 20,
+	"dummy_end_of_list_so_I_don't_worry_about_commas": 0
+}
