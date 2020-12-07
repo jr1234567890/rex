@@ -759,6 +759,10 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
         pointx=pointx+osc_value
 
     # write the command values to the arduino.
+
+    #DEBUG
+    print  (pointx, pointy, mouth_pos, eye_cmd,tilt_servo,max_servo_slew)  
+    
     if(skipflag==0):
         commandecho=myRexCommand.update(pointx, pointy, mouth_pos, eye_cmd,tilt_servo,max_servo_slew)    
         #print(tilt_servo) 
@@ -931,7 +935,7 @@ if skipflag==0:
     #     time.sleep(2/step)
 
     #10/25/20 - added slew function in arduino, and we don't need the above slew anymore
-    commandecho=myRexCommand.update(90, 90, 90, 0, 90)
+    commandecho=myRexCommand.update(90, 90, 90, 0, 90,1)
 
     
 
