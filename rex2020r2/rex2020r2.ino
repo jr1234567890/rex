@@ -63,6 +63,7 @@ byte eyes=8;
 
 // define servo min/max to prevent overdrive
 // this needs to be tweaked if servos arms are reinstalled
+/*
 byte servo1Min = 41;
 byte servo1Max = 127;
 byte servo2Min = 70;
@@ -71,7 +72,7 @@ byte servo3Min = 72;
 byte servo3Max = 94;
 byte servo4Min = 70;
 byte servo4Max = 110;
-
+*/
 
 float max_current = 2.5; //exceeding this will trigger an abort
 int overcurrent_state=0;
@@ -116,8 +117,9 @@ int pulse_length=125;  //pulse length to trigger FX audio player
 //parameters for controlling slew rate of servos
 float servorate=.02;  //this is the ratio of the movement we allow with each loop. 
 int servodelay=5;  //milliseconds for the loop delay
-float max_servo_slew=50.0;  // max servo motion rate, degreees/sec
+int max_servo_slew=50;  // max servo motion rate, degreees/sec
 float servo_step;
+float servo_diff;
 
 //=============
 
@@ -242,8 +244,8 @@ void parseData() {
   strtokIndx = strtok(NULL, ","); // this continues where the previous call left off
   servo4 = atoi(strtokIndx);     // convert this part to an integer
 
-  strtokIndx = strtok(NULL, ","); // this continues where the previous call left off
-  max_servo_slew = atoi(strtokIndx);     // convert this part to an integer
+  //strtokIndx = strtok(NULL, ","); // this continues where the previous call left off
+  //max_servo_slew = atoi(strtokIndx);     // convert this part to an integer
 }
 
 //=============
@@ -263,13 +265,13 @@ void replyToPC() {
     Serial.print(" ");
     Serial.print(eye_cmd);
     Serial.print(" ");  
-    Serial.print(servo4);
+    Serial.print(int(Servo4Pos));
     Serial.print(" ");  
     Serial.print(current);
     Serial.print(" ");  
     Serial.print(ave_current);
-    Serial.print(" ");  
-    Serial.print(max_servo_slew);
+    //Serial.print(" ");  
+    //Serial.print(max_servo_slew);
     Serial.println(">");
 
   }
@@ -299,68 +301,43 @@ void updateServoPos() {
     Servo1Pos=Servo1Pos+((float)servo1-Servo1Pos)*servorate;
     */
 
-    //calculate servo increment
-    float servo_step;
-    servo_step=max_servo_slew*float(servodelay);
-     
+    //calculate servo increment, in degrees per time increment (servodelay in ms)
+    servo_step=float(max_servo_slew)*float(servodelay)/1000;
+    
     //update the commanded position with the incremental movement
     //these are all floats, so incremental updates will eventually reach the command
 
-//servo1
+  //  logic:
+  //  use servo_diff as a temp value to hold the difference between the comamand and the current postion
+  //   will be pos or neg
+  //  if the difference is > 0.5 deg, add or subtract the servo_step increment, depending on the sign of servo_dif
 
-    //if the commanded position is greater than the current position 
-    if (servo1-Servo1Pos>0.5) {
-       Servo1Pos=Servo1Pos+servo_step;
-    }
-    //if the commanded position is less than the current position
-    else if(servo1-Servo1Pos<-0.5) { 
-       Servo1Pos=Servo1Pos-servo_step;
-    }
-    
-    //else we are withing 0.5 degree, so just set it equal so we can skip servo writes we don't need
-    else {
-      Servo1Pos=float(servo1);
-    }
-    
-    
-    //write the new value if it is different than the original command
-    if ((float)servo1!=Servo1Pos) {
+//servo1 - horizonal servo
+    servo_diff=float(servo1)-Servo1Pos;  
+    if (abs(servo_diff)>0.3) {
+      Servo1Pos=Servo1Pos+(servo_diff/abs(servo_diff))*servo_step;
       MyServo1.write(int(Servo1Pos));  
-    } 
-
-//servo2
-
-   //if the commanded position is greater than the current position 
-    if (servo2-Servo2Pos>0.5) {
-       Servo2Pos=Servo2Pos+servo_step;
-    }
-    //if the commanded position is less than the current position
-    else if(servo2-Servo2pos<-0.5) { 
-       Servo2Pos=Servo2pos-servo_step;
     }
     
-    //else we are withing 0.5 degree, so just set it equal so we can skip servo writes we don't need
-    else {
-      Servo2Pos=float(servo2);
+//servo2 - vertical servo
+    servo_diff=float(servo2)-Servo2Pos;  
+    if (abs(servo_diff)>0.3) {
+      Servo2Pos=Servo2Pos+(servo_diff/abs(servo_diff))*servo_step;
+      MyServo1.write(int(Servo1Pos));  
     }
- 
-    if ((float)servo2!=Servo2Pos) {
-      MyServo2.write(int(Servo2Pos));  
-    } 
- 
+
+//servo3 mouth - no smoothing required for this
   if (servo3!=Servo3Pos){
       MyServo3.write(servo3);   
       Servo3Pos=servo3;
   }
 
-    Servo4Pos=Servo4Pos+((float)servo4-Servo4Pos)*servorate;
-    if (abs((float)servo4-Servo4Pos)<0.5) {
-      Servo4Pos=(float)servo4;
+//servo4 - tilt servo
+    servo_diff=float(servo4)-Servo4Pos;  
+    if (abs(servo_diff)>0.3) {
+      Servo4Pos=Servo4Pos+(servo_diff/abs(servo_diff))*servo_step;
+      MyServo1.write(int(Servo4Pos));  
     }
-    if ((float)servo4!=Servo4Pos) {
-      MyServo4.write(int(Servo4Pos));  
-    } 
-  
 
   if(eye_cmd==1){digitalWrite(eyes, HIGH);}
   else{digitalWrite (eyes, LOW); }

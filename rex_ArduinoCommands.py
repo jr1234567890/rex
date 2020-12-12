@@ -80,14 +80,14 @@ class RexCommand:
         self.y_max = conf["sy_max"]  # up
       
 
-    def update(self,x,y,jaw,eye,tilt,max_servo_slew):
+    def update(self,x,y,jaw,eye,tilt):
          # write the servo value to the arduino.
         # data format for serial interface to arduino is "SERVO5" and 5 integers: 
             #x, y, mouth, eye on/off command and head tilt
         
         ser=self.ser
 
-        arduino_string= "<SERVO5," + str(x) + "," + str(y) + "," + str(jaw) + "," + str(eye) + "," + str(tilt) + str(max_servo_slew) + ">"
+        arduino_string= "<SERVO5," + str(x) + "," + str(y) + "," + str(jaw) + "," + str(eye) + "," + str(tilt) + ">"
 
         #skip the serial write if the arduino is not connected, skipflag==1
         if self.skipflag==0:
