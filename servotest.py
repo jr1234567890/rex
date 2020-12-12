@@ -64,7 +64,7 @@ binary_timer=0
 print("Setup complete")
 
 
-while(True):  # replace with some kind of test to see if WebcamStream is still active?
+while(True):  
 
     sleep(0.001)
 

@@ -44,10 +44,10 @@
 #include <Servo.h>
 #include <avr/wdt.h>   //watchdog timer
 
-Servo MyServo1;
-Servo MyServo2;
-Servo MyServo3;
-Servo MyServo4;
+Servo MyServo1;   //horizonal
+Servo MyServo2;   //vertical
+Servo MyServo3;   //mouth
+Servo MyServo4;  //tilt
 
 //Assign pins - select from HW PWM pins:  3,5,6,9,10,11
 byte servoPin1 = 9;
@@ -72,8 +72,6 @@ byte servo3Max = 94;
 byte servo4Min = 70;
 byte servo4Max = 110;
 
-//define a default max servo slew rate.  This will be overwritten by data from the PC.
-float max_servo_slew=90;  //
 
 float max_current = 2.5; //exceeding this will trigger an abort
 int overcurrent_state=0;
@@ -83,14 +81,14 @@ float ave_current=0.0;
 float alpha=0.9;
 unsigned long overcurrent_timer;  //a timer to measure how long the current has spiked
 
-// initialize all servos to point to the center
+// initialize servocommand to point to the center
 int servo1=90;
 int servo2=90;
 int servo3=90;
 int servo4=90;
 int eye_cmd=0;
 
-// initialize parameters to check for servo change
+// initialize servo current positions
 float Servo1Pos=90.0;
 float Servo2Pos=90.0;
 float Servo3Pos=90.0;
@@ -118,6 +116,8 @@ int pulse_length=125;  //pulse length to trigger FX audio player
 //parameters for controlling slew rate of servos
 float servorate=.02;  //this is the ratio of the movement we allow with each loop. 
 int servodelay=5;  //milliseconds for the loop delay
+float max_servo_slew=50.0;  // max servo motion rate, degreees/sec
+float servo_step;
 
 //=============
 
@@ -253,9 +253,7 @@ void replyToPC() {
   if (newDataFromPC) {
     newDataFromPC = false;
         
-    Serial.print("<Msg ");
-
-    Serial.print(messageFromPC);
+    Serial.print("<MsgFromArduino ");
     Serial.print(" ");
     Serial.print(int(Servo1Pos));
     Serial.print(" ");
@@ -297,44 +295,55 @@ void updateServoPos() {
     //max_servo_slew is the max rate in degrees/sec
 
     /*
-     * This is the moving average slew approach
+     * This is the pld moving average slew approach
     Servo1Pos=Servo1Pos+((float)servo1-Servo1Pos)*servorate;
     */
 
-    float time_slots=1000/servodelay;  //number of servo updates per second
-    float max_slew_increment=max_servo_slew/time_slots; //maximum change in degrees per servo update
-    
-    //calculate the movement in this time slot without any constraints
-    float target_movement= ((float)servo1-Servo1Pos)/time_slots;
-
-    //cap the movement at the max servo slew rate
-    //I think the min() function only works on integers, so I'm using an if statement
-    if(target_movement>max_slew_increment){
-      target_movement=max_slew_increment;
-    }
-    if(target_movement<-max_slew_increment){
-      target_movement=-max_slew_increment;
-    }
-
+    //calculate servo increment
+    float servo_step;
+    servo_step=max_servo_slew*float(servodelay);
+     
     //update the commanded position with the incremental movement
     //these are all floats, so incremental updates will eventually reach the command
-    Servo1Pos=Servo1Pos-target_movement;
-    
-    //if the position is within half a degree, we are close enough and we just set them equal
-    if (abs((float)servo1-Servo1Pos)<0.5) {
-      Servo1Pos=(float)servo1;
+
+//servo1
+
+    //if the commanded position is greater than the current position 
+    if (servo1-Servo1Pos>0.5) {
+       Servo1Pos=Servo1Pos+servo_step;
     }
- 
+    //if the commanded position is less than the current position
+    else if(servo1-Servo1Pos<-0.5) { 
+       Servo1Pos=Servo1Pos-servo_step;
+    }
+    
+    //else we are withing 0.5 degree, so just set it equal so we can skip servo writes we don't need
+    else {
+      Servo1Pos=float(servo1);
+    }
+    
     
     //write the new value if it is different than the original command
     if ((float)servo1!=Servo1Pos) {
       MyServo1.write(int(Servo1Pos));  
     } 
-      
-    Servo2Pos=Servo2Pos+((float)servo2-Servo2Pos)*servorate;
-    if (abs((float)servo2-Servo2Pos)<0.5) {
-      Servo2Pos=(float)servo2;
+
+//servo2
+
+   //if the commanded position is greater than the current position 
+    if (servo2-Servo2Pos>0.5) {
+       Servo2Pos=Servo2Pos+servo_step;
     }
+    //if the commanded position is less than the current position
+    else if(servo2-Servo2pos<-0.5) { 
+       Servo2Pos=Servo2pos-servo_step;
+    }
+    
+    //else we are withing 0.5 degree, so just set it equal so we can skip servo writes we don't need
+    else {
+      Servo2Pos=float(servo2);
+    }
+ 
     if ((float)servo2!=Servo2Pos) {
       MyServo2.write(int(Servo2Pos));  
     } 
