@@ -527,8 +527,6 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
        
         #calculate servo command based on eye_angle multiplied by a config paramter
         tilt_servo= int(90 - conf["tilt_ratio"]*eye_angle)
-        # use numpy.clip to make sure the value is in the max tilt range
-        tilt_servo=np.clip(tilt_servo,90-conf["max_tilt"], 90+conf["max_tilt"])
 
         #compute the time it took to process the objects
         objectprocttime=time.time()-starttime
@@ -637,14 +635,6 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     servo_y3=servo_y2*sy_scale
     pointy=int(servo_y3+sy_center)
     #print(servo_y, servo_y1,servo_y2, servo_y3)
-
-    # prevent pointx and pointy from exceeding the servo end stops
-    #TODO see if this single line should replace hte 2 lines
-    #pointx=max(x_min,min(pointx,x_max))
-    if pointx<x_min: pointx=x_min
-    if pointx>x_max: pointx=x_max
-    if pointy<y_min: pointy=y_min
-    if pointy>y_max: pointy=y_max
 
     #set Trex jaw servo to match mouth opening of the person.
     # mouth_open and mouth_closed are the servo min/max.
@@ -760,12 +750,24 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
 
     # write the command values to the arduino.
 
+    # prevent pointx and pointy from exceeding the servo end stops
+   # if pointx<x_min: pointx=x_min
+   # if pointx>x_max: pointx=x_max
+   # if pointy<y_min: pointy=y_min
+   # if pointy>y_max: pointy=y_max
+
+    #12/13/20  replace with nump clip function to make sure servos don't exceed limits
+    pointx=numpy.clip(pointx,xmin,xmax)
+    pointy=numpy.clip(pointy,ymin,ymax)
+    tilt_servo=np.clip(tilt_servo,90-conf["max_tilt"], 90+conf["max_tilt"])
+
     #DEBUG
-    print  (pointx, pointy, mouth_pos, eye_cmd,tilt_servo,max_servo_slew)  
+    #print  (pointx, pointy, mouth_pos, eye_cmd,tilt_servo,max_servo_slew)  
+    print  (pointx, pointy, mouth_pos, eye_cmd,tilt_servo)  
     
     if(skipflag==0):
-        commandecho=myRexCommand.update(pointx, pointy, mouth_pos, eye_cmd,tilt_servo,max_servo_slew)    
-        #print(tilt_servo) 
+        commandecho=myRexCommand.update(pointx, pointy, m1outh_pos, eye_cmd,tilt_servo,max_servo_slew)    
+        commandecho=myRexCommand.update(pointx, pointy, m1outh_pos, eye_cmd,tilt_servo)    
     #DEBUG
         print(commandecho)
 
