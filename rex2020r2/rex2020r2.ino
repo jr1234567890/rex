@@ -50,8 +50,8 @@ Servo MyServo3;   //mouth
 Servo MyServo4;  //tilt
 
 //Assign pins - select from HW PWM pins:  3,5,6,9,10,11
-byte servoPin1 = 9;
-byte servoPin2 = 10;
+byte servoPin1 = 9;   //9
+byte servoPin2 = 10;  //10
 byte servoPin3 = 11;
 byte servoPin4 = 6;
 
@@ -94,6 +94,11 @@ float Servo1Pos=90.0;
 float Servo2Pos=90.0;
 float Servo3Pos=90.0;
 float Servo4Pos=90.0;
+
+int servo1cmd;
+int servo2cmd;
+int servo3cmd;
+int servo4cmd;
 
 const byte buffSize = 40;
 char inputBuffer[buffSize];
@@ -178,6 +183,7 @@ void loop() {
   monitor_current();
   updateServoPos();  //includes turning eyes on and off   
   replyToPC();
+  //delay(5);
   delay(servodelay);  //delay 5 ms, this will enable the slew function to work at a set interval
 }
 
@@ -316,15 +322,21 @@ void updateServoPos() {
     servo_diff=float(servo1)-Servo1Pos;  
     if (abs(servo_diff)>0.3) {
       Servo1Pos=Servo1Pos+(servo_diff/abs(servo_diff))*servo_step;
-      MyServo1.write(int(Servo1Pos));  
+      //MyServo1.write(int(Servo1Pos));  
     }
+    servo1cmd=int(Servo1Pos);
+    MyServo1.write(servo1cmd);  
+    
     
 //servo2 - vertical servo
     servo_diff=float(servo2)-Servo2Pos;  
     if (abs(servo_diff)>0.3) {
       Servo2Pos=Servo2Pos+(servo_diff/abs(servo_diff))*servo_step;
-      MyServo1.write(int(Servo1Pos));  
+      //MyServo1.write(int(Servo1Pos));  
+
     }
+    servo2cmd=int(Servo2Pos);
+    MyServo2.write(servo2cmd); 
 
 //servo3 mouth - no smoothing required for this
   if (servo3!=Servo3Pos){
@@ -336,8 +348,10 @@ void updateServoPos() {
     servo_diff=float(servo4)-Servo4Pos;  
     if (abs(servo_diff)>0.3) {
       Servo4Pos=Servo4Pos+(servo_diff/abs(servo_diff))*servo_step;
-      MyServo1.write(int(Servo4Pos));  
+      //MyServo1.write(int(Servo4Pos));  
     }
+    MyServo4.write(int(Servo4Pos));  
+    
 
   if(eye_cmd==1){digitalWrite(eyes, HIGH);}
   else{digitalWrite (eyes, LOW); }

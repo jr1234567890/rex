@@ -33,8 +33,8 @@ eye_cmd=0
 
 
 
-xmin=41
-xmax=145
+xmin=70
+xmax=110
 ymin=70
 ymax=145
 mouthopen=77
