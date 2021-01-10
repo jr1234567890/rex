@@ -33,15 +33,17 @@ eye_cmd=0
 
 
 
-xmin=70
-xmax=110
-ymin=70
-ymax=145
+xmin=55  # nin ins 45, bu tlimiting it to avoid hitting servo wire
+xmax=125  # max is 135
+ymin=32
+ymax=157
 mouthopen=77
 mouthclosed=90
-tiltmin=70
-tiltmax=110
-max_servo_slew=50
+tiltmin=25
+tiltmax=153
+#max_servo_slew=50
+
+delay=3  # seconds between
 
 
 starttime=time.time()
@@ -51,21 +53,21 @@ while(True):
 
 #    sleep(0.004)
     mytime=time.time()-starttime
-    if (mytime>2) : pointx=xmax
-    if (mytime>4) : pointx=xmin
-    if (mytime>6) : pointx=90
-    if (mytime>8) : pointy=ymax
-    if (mytime>10) : pointy=ymin
-    if (mytime>12) : pointy=90
-    if (mytime>14) : mouth_pos=mouthopen
-    if (mytime>16) : mouth_pos=mouthclosed
-    if (mytime>18) : eye_cmd=1
-    if (mytime>20) : eye_cmd=0
-    if (mytime>22) : eye_angle=tiltmin
-    if (mytime>24) : eye_angle=tiltmax
-    if (mytime>26) : eye_angle=90
+    if (mytime>3) : pointx=xmax
+    if (mytime>6) : pointx=xmin
+    if (mytime>9) : pointx=90
+    if (mytime>12) : pointy=ymax
+    if (mytime>15) : pointy=ymin
+    if (mytime>18) : pointy=90
+    if (mytime>21) : mouth_pos=mouthopen
+    if (mytime>22) : mouth_pos=mouthclosed
+    if (mytime>23) : eye_cmd=1
+    if (mytime>24) : eye_cmd=0
+    if (mytime>25) : eye_angle=tiltmin
+    if (mytime>28) : eye_angle=tiltmax
+    if (mytime>31) : eye_angle=90
     
-    if (mytime>28) : starttime=time.time()
+    if (mytime>34) : starttime=time.time()
 
    
     ##################   Send to Arduino  #############################

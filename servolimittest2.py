@@ -26,8 +26,9 @@ value=90
 while(True):  # replace with some kind of test to see if WebcamStream is still active?
 
     #set the item of interest = value (which is adjusted by a and z keys)
+    pointx=value
 
-    print  (pointx, pointy, mouth_pos, eye_cmd,tilt_servo)  
+    #print  (pointx, pointy, mouth_pos, eye_cmd,tilt_servo)  
     
     commandecho=myRexCommand.update(pointx, pointy, mouth_pos, eye_cmd,tilt_servo,max_servo_slew)    
         
@@ -42,7 +43,7 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
         break
     if key == ord("a"):
             value=value+1
-    if key == ord("z):
+    if key == ord("z"):
             value=value-1
 
     sleep(0.1)

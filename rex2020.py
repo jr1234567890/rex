@@ -520,13 +520,14 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
 
         # compute the angle between the eye centroids (arctan of deltaY/deltaX)
         # and smooth it out with a pseudo moving average
-        eye_alpha=.9  # this is the moving average alpha - higher numbers make the change more gradual
+        eye_alpha=.8  # this is the moving average alpha - higher numbers make the change more gradual
         eye_angle_temp = np.degrees(np.arctan2((rightEyeCenter[1] - leftEyeCenter[1]) , (rightEyeCenter[0] - leftEyeCenter[0])))
         eye_angle =  eye_angle_temp * (1-eye_alpha) + eye_angle * eye_alpha
 
        
         #calculate servo command based on eye_angle multiplied by a config paramter
         tilt_servo= int(90 - conf["tilt_ratio"]*eye_angle)
+        #print (tilt_servo)
 
         #compute the time it took to process the objects
         objectprocttime=time.time()-starttime
@@ -751,23 +752,26 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     # write the command values to the arduino.
 
     # prevent pointx and pointy from exceeding the servo end stops
-   # if pointx<x_min: pointx=x_min
-   # if pointx>x_max: pointx=x_max
-   # if pointy<y_min: pointy=y_min
-   # if pointy>y_max: pointy=y_max
+    if pointx<x_min: pointx=x_min
+    if pointx>x_max: pointx=x_max
+    if pointy<y_min: pointy=y_min
+    if pointy>y_max: pointy=y_max
+    if tilt_servo> 90+conf["max_tilt"]: tilt_servo=90+conf["max_tilt"]
+    if tilt_servo< 90-conf["max_tilt"]: tilt_servo=90-conf["max_tilt"]
 
-    #12/13/20  replace with nump clip function to make sure servos don't exceed limits
-    pointx=numpy.clip(pointx,xmin,xmax)
-    pointy=numpy.clip(pointy,ymin,ymax)
-    tilt_servo=np.clip(tilt_servo,90-conf["max_tilt"], 90+conf["max_tilt"])
+    #12/13/20  replace with numpy clip function to make sure servos don't exceed limits
+    #1/10/21, np.clip is throwing an error.  put the manual if statements back in, above
+    #pointx=np.clip(pointx,x_min,x+max)
+    #pointy=np.clip(pointy,y_min,y_max)
+    #tilt_servo=np.clip(tilt_servo,90-conf["max_tilt"], 90+conf["max_tilt"])
 
     #DEBUG
     #print  (pointx, pointy, mouth_pos, eye_cmd,tilt_servo,max_servo_slew)  
-    print  (pointx, pointy, mouth_pos, eye_cmd,tilt_servo)  
+    #print  (pointx, pointy, mouth_pos, eye_cmd,tilt_servo)  
     
     if(skipflag==0):
-        commandecho=myRexCommand.update(pointx, pointy, m1outh_pos, eye_cmd,tilt_servo,max_servo_slew)    
-        commandecho=myRexCommand.update(pointx, pointy, m1outh_pos, eye_cmd,tilt_servo)    
+        
+        commandecho=myRexCommand.update(pointx, pointy, mouth_pos, eye_cmd,tilt_servo)    
     #DEBUG
         print(commandecho)
 
@@ -937,7 +941,7 @@ if skipflag==0:
     #     time.sleep(2/step)
 
     #10/25/20 - added slew function in arduino, and we don't need the above slew anymore
-    commandecho=myRexCommand.update(90, 90, 90, 0, 90,1)
+    commandecho=myRexCommand.update(90, 90, 90, 0, 90)
 
     
 

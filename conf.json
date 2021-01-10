@@ -51,8 +51,8 @@
 	"randy_roar":"aud_human-heartbeat-daniel_simon.wav",
 	"ed_roar":"aud_daffy_despicable.wav",
 	"rick_roar":"aud_yosemite_toads.wav",
-	"tilt_ratio":  2.5,
-	"max_tilt": 30,
+	"tilt_ratio":  4,
+	"max_tilt": 50,
 	"max_servo_slew": 20,
 	"dummy_end_of_list_so_I_don't_worry_about_commas": 0
 }
