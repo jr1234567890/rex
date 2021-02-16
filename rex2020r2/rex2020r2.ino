@@ -123,7 +123,9 @@ int pulse_length=125;  //pulse length to trigger FX audio player
 float servorate=.02;  //this is the ratio of the movement we allow with each loop. 
 int servodelay=5;  //milliseconds for the loop delay
 int max_servo_slew=50;  // max servo motion rate, degreees/sec
+int max_horiz_servo_slew=30;  //use a slower slew for left/right slew
 float servo_step;
+float horiz_servo_step;
 float servo_diff;
 
 //=============
@@ -147,6 +149,11 @@ void setup() {
 
   pinMode(eyes, OUTPUT);
   pinMode(13, OUTPUT);   //LED
+  
+  //calculate servo increment, in degrees per time increment (servodelay in ms)
+  servo_step=float(max_servo_slew)*float(servodelay)/1000;
+  horiz_servo_step=float(max_horiz_servo_slew)*float(servodelay)/1000;
+
     
   digitalWrite(eyes, LOW); // Start with the eyes off
 
@@ -307,8 +314,6 @@ void updateServoPos() {
     Servo1Pos=Servo1Pos+((float)servo1-Servo1Pos)*servorate;
     */
 
-    //calculate servo increment, in degrees per time increment (servodelay in ms)
-    servo_step=float(max_servo_slew)*float(servodelay)/1000;
     
     //update the commanded position with the incremental movement
     //these are all floats, so incremental updates will eventually reach the command
@@ -321,7 +326,7 @@ void updateServoPos() {
 //servo1 - horizonal servo
     servo_diff=float(servo1)-Servo1Pos;  
     if (abs(servo_diff)>0.3) {
-      Servo1Pos=Servo1Pos+(servo_diff/abs(servo_diff))*servo_step;
+      Servo1Pos=Servo1Pos+(servo_diff/abs(servo_diff))*horiz_servo_step;
       //MyServo1.write(int(Servo1Pos));  
     }
     servo1cmd=int(Servo1Pos);

@@ -113,7 +113,7 @@ winname = "Face Tracker"
 cv2.namedWindow(winname)        # Create a named window
 cv2.moveWindow(winname, 10, 30)  # Move it to as specific Window coordinate
 
-start_time = time.time()  #initialize the timer
+#start_time = time.time()  #initialize the timer
 
 # set up roar parameters and tracking parameters
 roar_timer = time.time()
@@ -237,23 +237,25 @@ sleep(1)  #pause to let all the threads start up
 ##############   The main loop   ###############################
 
 #initialize timers, measurements, and flags
-starttime=time.time()
+start_time=time.time()
 looptime=time.time()
 facerecognitiontime=0
 objectprocttime=0
-
-
-
+objecttime=0
+dettime=0
+palmtime=0
+now=0
+servotime=0
+faceIDtime=0
+get_frametime=0
+debugtimer=0
+loop=0
+    
 
 while(True):  # replace with some kind of test to see if WebcamStream is still active?
-
-    # this was added to slow down the frame capture, but was replaced with the "wait until a frame is ready", when I realized the frame capture rate was slower than the camera rate
-    # while(time.time()-looptime<(1/15)):
-    #     sleep(0.001)
-    # looptime=time.time()    
+    start_time=time.time()
 
     #get new frame from the source
-
     #wait until a new frame is ready.
     while(myFrameCapture.getNewFrameStatus==False):
         sleep(0.01)
@@ -266,6 +268,8 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
 
     fullframe=myFrameCapture.getFrameFull()
     scale=myFrameCapture.getScale()
+
+    get_frametime=time.time()
 
 
     #############    PALM   DETECTOR   ###############
@@ -295,6 +299,8 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     rects4 = []
     rects5 = []
 
+    palmtime=time.time()
+
     #######    FACE DETECTOR #############
 
     #initialize a timer to measure face detection time
@@ -305,6 +311,7 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
 
     #calculate the face detection time
     detproctime=time.time()-detstart_time
+    dettime=time.time()
 
     #########   TRACK OBJECTS  ###########
 
@@ -520,19 +527,20 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
 
         # compute the angle between the eye centroids (arctan of deltaY/deltaX)
         # and smooth it out with a pseudo moving average
-        eye_alpha=.9  # this is the moving average alpha - higher numbers make the change more gradual
+        eye_alpha=.8  # this is the moving average alpha - higher numbers make the change more gradual
         eye_angle_temp = np.degrees(np.arctan2((rightEyeCenter[1] - leftEyeCenter[1]) , (rightEyeCenter[0] - leftEyeCenter[0])))
         eye_angle =  eye_angle_temp * (1-eye_alpha) + eye_angle * eye_alpha
 
        
         #calculate servo command based on eye_angle multiplied by a config paramter
         tilt_servo= int(90 - conf["tilt_ratio"]*eye_angle)
+        #print (tilt_servo)
 
         #compute the time it took to process the objects
-        objectprocttime=time.time()-starttime
+        objectprocttime=time.time()-start_time
+        objecttime=time.time()
 
     #################           FACE ID             #################
-
 
 #TODO  - only do this until an ID is associated with an object, to prevent jitter
         #selected_object is the index to the selected target
@@ -600,8 +608,9 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
                 #     print (text)
 
         
-            facerecognitiontime=time.time()-starttime  - objectprocttime
-
+            facerecognitiontime=time.time()-start_time  - objectprocttime
+    
+    faceIDtime=time.time()
 
 
     ##################### Set Servo target  ###########################
@@ -751,37 +760,41 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     # write the command values to the arduino.
 
     # prevent pointx and pointy from exceeding the servo end stops
-   # if pointx<x_min: pointx=x_min
-   # if pointx>x_max: pointx=x_max
-   # if pointy<y_min: pointy=y_min
-   # if pointy>y_max: pointy=y_max
+    if pointx<x_min: pointx=x_min
+    if pointx>x_max: pointx=x_max
+    if pointy<y_min: pointy=y_min
+    if pointy>y_max: pointy=y_max
+    if tilt_servo> 90+conf["max_tilt"]: tilt_servo=90+conf["max_tilt"]
+    if tilt_servo< 90-conf["max_tilt"]: tilt_servo=90-conf["max_tilt"]
 
-    #12/13/20  replace with nump clip function to make sure servos don't exceed limits
-    pointx=numpy.clip(pointx,xmin,xmax)
-    pointy=numpy.clip(pointy,ymin,ymax)
-    tilt_servo=np.clip(tilt_servo,90-conf["max_tilt"], 90+conf["max_tilt"])
+    #12/13/20  replace with numpy clip function to make sure servos don't exceed limits
+    #1/10/21, np.clip is throwing an error.  put the manual if statements back in, above
+    #pointx=np.clip(pointx,x_min,x+max)
+    #pointy=np.clip(pointy,y_min,y_max)
+    #tilt_servo=np.clip(tilt_servo,90-conf["max_tilt"], 90+conf["max_tilt"])
 
     #DEBUG
     #print  (pointx, pointy, mouth_pos, eye_cmd,tilt_servo,max_servo_slew)  
-    print  (pointx, pointy, mouth_pos, eye_cmd,tilt_servo)  
+    #print  (pointx, pointy, mouth_pos, eye_cmd,tilt_servo)  
     
     if(skipflag==0):
-        commandecho=myRexCommand.update(pointx, pointy, m1outh_pos, eye_cmd,tilt_servo,max_servo_slew)    
-        commandecho=myRexCommand.update(pointx, pointy, m1outh_pos, eye_cmd,tilt_servo)    
+        
+        commandecho=myRexCommand.update(pointx, pointy, mouth_pos, eye_cmd,tilt_servo)    
     #DEBUG
-        print(commandecho)
+       # print(commandecho)
 
+    servotime=time.time()
     ############    Create the Output Display  ################
 
     # calculate and display the output frames per second
     #totalFrames += 1
-    frametime=1/(time.time()-start_time)
-    start_time=time.time()
+    frametime=1/(time.time()-looptime)
+    #looptime=time.time()
     palmproctime=myPalmDetector.get_proctime()
 
     text =  "Frame (FPS)       {:03.0f}".format(frametime)
-    text1 = "Face Detector(ms)  {:03.0f}".format(detproctime*1000)
-    text4 = "Palm Detector(ms)  {:03.0f}".format(palmproctime*1000)
+    text1 = "Face Detector(ms)  {:03.0f}".format(detproctime*1000)   
+    text4 = "Palm Detector(ms)  {:03.0f} ".format(palmproctime*1000)  
     text5 = "Hands             {:03.1f}".format(num_palms)
     text6=  "Eye angle         {:03.1f}".format(eye_angle)
     text7=  "Face ID time (ms)  {:03.0f}".format(facerecognitiontime*1000)
@@ -790,6 +803,27 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
         framemetric==999
     text8=  "Frame Capture (Hz)  {:03.0f}".format(int(1/(framemetric+0.001)))
 
+    # convert time stampes to individual durations
+   
+    servotime=servotime-faceIDtime
+    faceIDtime=faceIDtime-objecttime
+    objecttime=objecttime-dettime
+    dettime=dettime-palmtime
+    palmtime=palmtime - get_frametime
+    get_frametime=get_frametime-start_time
+    loop=time.time()-looptime
+    #reset loop timer
+    looptime=time.time()
+  
+    text10 = "get frame {:03.0f}".format(get_frametime*1000)
+    text11 = "palm      {:03.0f}".format(palmtime*1000)
+    text12 = "det       {:03.0f}".format(dettime*1000)
+    text13 = "object    {:03.0f}".format(objecttime*1000)
+    text14 = "ID        {:03.0f}".format(faceIDtime*1000)
+    text15 = "servo     {:03.0f}".format(servotime*1000)
+    text16 = "loop      {:03.0f}".format(loop*1000)
+    
+
     cv2.putText(frame, text, (10, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2) 
     cv2.putText(frame, text1, (10, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)        
     cv2.putText(frame, text4, (10, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
@@ -797,6 +831,14 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     cv2.putText(frame, text6, (10, 95), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
     cv2.putText(frame, text7, (10, 115), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
     cv2.putText(frame, text8, (10, 135), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+    
+    cv2.putText(frame, text10, (300, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+    cv2.putText(frame, text11, (300, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+    cv2.putText(frame, text12, (300, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+    cv2.putText(frame, text13, (300, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+    cv2.putText(frame, text14, (300, 95), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+    cv2.putText(frame, text15, (300, 115), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+    cv2.putText(frame, text16, (300, 135), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
 
     if (num_palms>=2):
         text = "HANDS {:03.1f}".format(num_palms)
@@ -937,7 +979,7 @@ if skipflag==0:
     #     time.sleep(2/step)
 
     #10/25/20 - added slew function in arduino, and we don't need the above slew anymore
-    commandecho=myRexCommand.update(90, 90, 90, 0, 90,1)
+    commandecho=myRexCommand.update(90, 90, 90, 0, 90)
 
     
 
