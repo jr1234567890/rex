@@ -21,7 +21,7 @@ class PalmCascade:
 		self.readflag=0
 	
 		# start the thread
-		print("Palm Cascade Thread starting")
+		print("Palm Cascade: Thread starting")
 		t1=Thread(target=self.run, args=()).start()
 			
 	# send a new frame to the thread

@@ -104,7 +104,7 @@ landmarkpredictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat"
 # instantiate our centroid tracker, then initialize a list to store
 # each of our dlib correlation trackers, followed by a dictionary to
 # map each unique object ID to a TrackableObject
-ct = CentroidTracker(maxDisappeared=30, maxDistance=90)
+ct = CentroidTracker(maxDisappeared=10, maxDistance=90)
 trackers = []
 trackableObjects = {}
 
@@ -262,12 +262,11 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
 
     frame=myFrameCapture.getFrame()
     orig_frame==myFrameCapture.getFrame()
+    fullframe=myFrameCapture.getFrameFull()
+    scale=myFrameCapture.getScale()
 
     #cv2.imshow("orig frame", orig_frame)
     #cv2.imshow("working frame", frame)
-
-    fullframe=myFrameCapture.getFrameFull()
-    scale=myFrameCapture.getScale()
 
     get_frametime=time.time()
 
@@ -311,8 +310,8 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
 
     #calculate the face detection time
     detproctime=time.time()-detstart_time
-    dettime=time.time()
-
+    #dettime=time.time()
+    
     #########   TRACK OBJECTS  ###########
 
     # use the centroid tracker to associate the (1) old object
@@ -321,8 +320,17 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     objects = ct.update(rects)
     #Return structure: (ID, centroid), where centroid = (centroidX, centroidY, startX, startY, endX, endY)) 
 
+    #DEBUG  print box around current rects in yellow
+    #for i in range(0, len(rects)):
+    #    tempstartx=rects[i][0]
+    #    tempstarty=rects[i][1]
+    #    tempendx=rects[i][2]
+    #    tempendy=rects[i][3]
+    #    cv2.rectangle(frame, (tempstartx-10, tempstarty-10), (tempendx+10, tempendy+10), (0,255,255), 1)
+
     # reset the current list of objects and build it fresh each cycle
     current_list = []
+    #print ("                           ",objects.items())
 
     # update trackable objects list and display
     for (objectID, centroid) in objects.items():
@@ -362,7 +370,7 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
         end_y[objectID] = centroid[5]
 
         #draw a blue box around all detections, with 5 pixels added to each side
-        cv2.rectangle(frame, (start_x[objectID]-5, start_y[objectID]), (end_x[objectID]+5, end_y[objectID]), (255,0,0), 1)
+        #cv2.rectangle(frame, (start_x[objectID]-5, start_y[objectID]+5), (end_x[objectID]+5, end_y[objectID]+5), (255,0,0), 1)
     # print (objectID, start_x[objectID], start_y[objectID], end_x[objectID], end_y[objectID])
 
         ############## calculate the interest parameter   #################
@@ -423,7 +431,7 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     if len(current_list)==0:        
         #set the target to the neutral point
         target_x = proc_w/2
-        target_y = proc_h/2
+        target_y = proc_h/10  #set it to look up
         eye_angle=0
         ID_object=999   #set the recognizer ID to default
         #print ("no detections")
@@ -551,11 +559,14 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
         # if unknown, keep trying until you get it
 
         #toggle the ID_unknown flag to True if this is a different target
-        if (new_object_flag==True):
-            ID_unknown=True       
 
+        if (new_object_flag==True):
+            ID_unknown=True   
+
+        
         if (conf["enable_face_ID"] and ID_unknown==True):
-            #print ("Attempting face id on target ", selected_object)
+            print ("Attempting face id on target ", selected_object)
+            facerecognitiontime=time.time()
             #define the box in the coordinates needed by the recognizer
 
             #(startX, startY, endX, endY) = (l,t,r,b)
@@ -608,9 +619,9 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
                 #     print (text)
 
         
-            facerecognitiontime=time.time()-start_time  - objectprocttime
+            facerecognitiontime=time.time()-facerecognitiontime
     
-    faceIDtime=time.time()
+    #faceIDtime=time.time()
 
 
     ##################### Set Servo target  ###########################
@@ -776,14 +787,14 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     #DEBUG
     #print  (pointx, pointy, mouth_pos, eye_cmd,tilt_servo,max_servo_slew)  
     #print  (pointx, pointy, mouth_pos, eye_cmd,tilt_servo)  
-    
+    servotime=time.time()
     if(skipflag==0):
         
         commandecho=myRexCommand.update(pointx, pointy, mouth_pos, eye_cmd,tilt_servo)    
     #DEBUG
        # print(commandecho)
 
-    servotime=time.time()
+    servotime=(time.time()-servotime)*1
     ############    Create the Output Display  ################
 
     # calculate and display the output frames per second
@@ -806,7 +817,7 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     # convert time stampes to individual durations
    
     servotime=servotime-faceIDtime
-    faceIDtime=faceIDtime-objecttime
+    #faceIDtime=faceIDtime-objecttime
     objecttime=objecttime-dettime
     dettime=dettime-palmtime
     palmtime=palmtime - get_frametime
@@ -815,13 +826,11 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     #reset loop timer
     looptime=time.time()
   
-    text10 = "get frame {:03.0f}".format(get_frametime*1000)
-    text11 = "palm      {:03.0f}".format(palmtime*1000)
-    text12 = "det       {:03.0f}".format(dettime*1000)
-    text13 = "object    {:03.0f}".format(objecttime*1000)
-    text14 = "ID        {:03.0f}".format(faceIDtime*1000)
-    text15 = "servo     {:03.0f}".format(servotime*1000)
-    text16 = "loop      {:03.0f}".format(loop*1000)
+    text10 = "get frame {:03.0f}".format(get_frametime*100000)
+    text11 = "palm      {:03.0f}".format(palmtime*100000)
+    #text14 = "ID        {:03.0f}".format(faceIDtime*1000)
+    text15 = "servo time     {:03.0f}".format(servotime*1000)
+    #text16 = "loop      {:03.0f}".format(loop*1000)
     
 
     cv2.putText(frame, text, (10, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2) 
@@ -834,15 +843,15 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     
     cv2.putText(frame, text10, (300, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
     cv2.putText(frame, text11, (300, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
-    cv2.putText(frame, text12, (300, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
-    cv2.putText(frame, text13, (300, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
-    cv2.putText(frame, text14, (300, 95), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+    
+    #cv2.putText(frame, text13, (300, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+    #cv2.putText(frame, text14, (300, 95), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
     cv2.putText(frame, text15, (300, 115), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
-    cv2.putText(frame, text16, (300, 135), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
+    #cv2.putText(frame, text16, (300, 135), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
 
     if (num_palms>=2):
         text = "HANDS {:03.1f}".format(num_palms)
-        cv2.putText(frame, text, (10, 135), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+        cv2.putText(frame, text, (10, 175), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
 
     # display the servo location 
     #text = "Servo x {:03.0f}, Servo y {:03.0f} Point x {:03.0f} Point y {:03.0f}".format(servo_x, servo_y, pointx, pointy)

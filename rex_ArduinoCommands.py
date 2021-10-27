@@ -1,7 +1,4 @@
-#This class pulls video frames from the camera, scales, crops and processes fisheye compensation and provides the latest frame on demand
-#This also sends frames to the cascade threads so they always have the latest
-
-
+#This class sends and receives data to the arduino based on the structure in the update() section
 #This is meant to run in a separate thread, to provide more CPU power to the main thread
 
 #import cv2
@@ -63,11 +60,11 @@ class RexCommand:
         if (platform.system()=="Linux"):  #see if it's Linux
         #if conf["linux"]==True:
             ser = serial.Serial("/dev/ttyACM0", conf["arduino_baud_rate"])
-            print("Linux Serial port set up with baud rate:", conf["arduino_baud_rate"])
+            print("Arduino Thread: Linux Serial port set up with baud rate:", conf["arduino_baud_rate"])
 
         else:  #else, set up the Windows com port     
             ser = serial.Serial(conf["win_arduino_port"],conf["arduino_baud_rate"])
-            print ("Windows serial port " + conf["win_arduino_port"] + " opened  Baudrate ", conf["arduino_baud_rate"])
+            print ("Arduino Thread: Windows serial port " + conf["win_arduino_port"] + " opened  Baudrate ", conf["arduino_baud_rate"])
 
         self.ser=ser
 

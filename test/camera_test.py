@@ -32,18 +32,22 @@ import cv2
 res=[640, 480]
 #res=[1440,1080]
 
-print ("Opening webcam")
+print ("declaring webcam")
 #this is Windows
-myframe = cv2.VideoCapture(0 , cv2.CAP_DSHOW)
-#(grabbed, frame) = myframe.read()
+#myframe = cv2.VideoCapture(0 , cv2.CAP_DSHOW)
 
+#this is Linux PC
+myframe = cv2.VideoCapture(-1)
+
+#(grabbed, frame) = myframe.read()
+print ("webcam declared")
 
 #cv2.CAP_DSHOW is a Windows option; added to get rid of black side bars on Arducam b0203 camera
 
 #set the webcam resolution and framerate
-myframe.set(3,res[0])   
-myframe.set(4,res[1])    
-myframe.set(5,25)      #framerate, nominally 25, but could be 29.97
+#myframe.set(3,res[0])   
+#myframe.set(4,res[1])    
+#myframe.set(5,25)      #framerate, nominally 25, but could be 29.97
 #self.myframe.set(15, 0.1)  #exposure
 
 #This works on the RPi webcam and the PC ball web cam
@@ -51,7 +55,7 @@ myframe.set(5,25)      #framerate, nominally 25, but could be 29.97
 
 # this does not work on the Arducam
 #Myframe.set(cv2.CAP_PROP_FOURCC,cv2.VideoWriter_fourcc('H','2','6','4'))
-
+print ("webcam initialized")
 
 
 #test to see if the stream is open
@@ -77,5 +81,6 @@ for x in range(0, 60):
     
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     cv2.imshow('raw image', gray)
+    cv2.imshow('color', frame)
 
 cv2.destroyAllWindows

@@ -1,4 +1,9 @@
-# import the necessary packages
+#This is a modified version of the function from the pyimagesearch.com blog.
+#This compares all the detection boxes, and merges any that have a high amount of overlap
+#It is not clear whether the facial detectdor that I am using in 2021 needs this, but earlier detectors
+   # were throwing a lot of redundant detection boxes.
+# 
+# # import the necessary packages
 import numpy as np
  
 # Malisiewicz et al.
@@ -7,7 +12,7 @@ def non_max_suppression_fast(boxes, overlapThresh):
 	if len(boxes) == 0:
 		return []
  
-	# if the bounding boxes integers, convert them to floats --
+	# if the bounding boxes are integers, convert them to floats --
 	# this is important since we'll be doing a bunch of divisions
 	if boxes.dtype.kind == "i":
 		boxes = boxes.astype("float")

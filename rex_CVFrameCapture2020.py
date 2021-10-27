@@ -12,6 +12,7 @@ import json
 #import numpy as np
 import imutils
 import platform   # for platform.system() to get the OS name
+import os
 
 
 #USB Camera set/get indices
@@ -64,9 +65,9 @@ class FrameCapture:
         if (conf["use_test_video"]):
             #    for testing with a file
             self.myframe = cv2.VideoCapture('o.mp4')
-            print ("Opening o.mp4")
+            print ("Framegrabber: Opening o.mp4")
         else:
-            print ("Opening webcam")
+            print ("Framegrabber: Opening webcam")
            ##    for Linux
             #self.myframe = cv2.VideoCapture(0)  #src)  #"/dev/video0")
 
@@ -75,13 +76,23 @@ class FrameCapture:
             # if both x and y (index 3 and 4) are not correct, it will default to 640x480
 
             #use the platform.system() call to identify the OS< and use the appropriate CV capture routine
-            print (platform.system())
+            print (platform.system(), " " ,os.uname()[4])  #index 4 is machine type, such as ARM or x86_64
 
-            if (platform.system()=="Linux"):
-                #this is the RPi/RPi
-                self.myframe = cv2.VideoCapture(0)
+            if (platform.system()=="Linux"): 
+                if (os.uname()[4]=="x86_64"):
+                    #this is the Linux PC 
+                    print ("FrameGrabber: Starting video capture for Linux PC")
+                    self.myframe = cv2.VideoCapture(-1)
+                    self.myframe.set(cv2.CAP_PROP_FOURCC,cv2.VideoWriter_fourcc('M','J','P','G'))
+
+                else:
+                    #this is the RPi
+                    print ("FrameGrabber: Starting video capture for RPi")
+                    self.myframe = cv2.VideoCapture(0)  #this works for RPi
+
             else:
                 #this is Windows
+                print ("FrameGrabber: Starting video capture for Windows PC")
                 self.myframe = cv2.VideoCapture(0 , cv2.CAP_DSHOW)
                 #cv2.CAP_DSHOW is a Windows option; added to get rid of black side bars on Arducam b0203 camera
 
@@ -143,6 +154,7 @@ class FrameCapture:
         self.framefull = self.framefull[self.ycrop:self.fullheight-self.ycrop, self.xcrop:self.fullwidth-self.xcrop]
         self.fullheight, self.fullwidth, channels = self.framefull.shape  #this is the shape of the cropped image
         print ("FrameGrabber Raw image after setting resolution and cropping ", self.fullwidth, self.fullheight)
+        print ("FrameGrabber frame rate", self.myframe.get(5)) #index 5 is the FPS of the video stream myframe
 
         #calculate the desired height of the processing frame, keeping the same scale
         self.scale=self.proc_w/self.fullwidth
