@@ -76,9 +76,10 @@ class FrameCapture:
             # if both x and y (index 3 and 4) are not correct, it will default to 640x480
 
             #use the platform.system() call to identify the OS< and use the appropriate CV capture routine
-            print (platform.system(), " " ,os.uname()[4])  #index 4 is machine type, such as ARM or x86_64
+            print (platform.system())             
 
             if (platform.system()=="Linux"): 
+                print (os.uname()[4])  #index 4 is machine type, such as ARM or x86_64
                 if (os.uname()[4]=="x86_64"):
                     #this is the Linux PC 
                     print ("FrameGrabber: Starting video capture for Linux PC")
