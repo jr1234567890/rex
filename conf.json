@@ -1,6 +1,6 @@
 {
 
-	"arduino": false,
+	"arduino": true,
 	"obsolte? linux_PC": true,
 	"use_test_video": false,
 	"output_video": false,
@@ -17,7 +17,7 @@
 	"xx_crop": 0,
 	"xy_crop": 0,
 	"xprocessing_width":100,
-	"x_crop": 40,
+	"x_crop": 0,
 	"y_crop": 0,
 	"processing_width": 800,  
 	"DNN_width":300,

@@ -432,6 +432,7 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
         #set the target to the neutral point
         target_x = proc_w/2
         target_y = proc_h/10  #set it to look up
+        tilt_servo=90
         eye_angle=0
         ID_object=999   #set the recognizer ID to default
         #print ("no detections")
@@ -695,9 +696,11 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     if(roar_flag==1):
         #while roaring, overwriting the pointing commands 
         pointy=y_max                    # move the head to look up during the roar   
-        pointx=(x_max-x_min)/2    
+        #pointx=(x_max-x_min)/2    
+        pointx=90
         mouth_pos=conf["mouth_open"]    # open the mouth
         eye_cmd=1                       # light up the eyes
+        #print("roar flag")
 
         #if palms goes up during roar, override with special roar and set flag to only do it oncd
         if (roar_special_flag==0) and num_palms>=conf["hands_for_special_roar"] :
@@ -765,8 +768,8 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
         xtimer=time.time() 
 
     #if pointing straight ahead, add the oscillation value to the x
-    if(pointx==90):
-        pointx=pointx+osc_value
+    #TODO if(pointx==90):
+    #    pointx=pointx+osc_value
 
     # write the command values to the arduino.
 
@@ -787,12 +790,17 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     #DEBUG
     #print  (pointx, pointy, mouth_pos, eye_cmd,tilt_servo,max_servo_slew)  
     #print  (pointx, pointy, mouth_pos, eye_cmd,tilt_servo)  
+
+
     servotime=time.time()
     if(skipflag==0):
-        
+     
+
+
+
         commandecho=myRexCommand.update(pointx, pointy, mouth_pos, eye_cmd,tilt_servo)    
     #DEBUG
-       # print(commandecho)
+    #    print(pointx, pointy, mouth_pos, eye_cmd,tilt_servo,commandecho)
 
     servotime=(time.time()-servotime)*1
     ############    Create the Output Display  ################
@@ -813,6 +821,8 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     if (framemetric==0):
         framemetric==999
     text8=  "Frame Capture (Hz)  {:03.0f}".format(int(1/(framemetric+0.001)))
+    #print (commandecho[-4:])
+    text9=  "Servo Current (A) "+ (commandecho[-4:]) #the last 4 characters is the current used by the servos
 
     # convert time stampes to individual durations
    
@@ -840,7 +850,7 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     cv2.putText(frame, text6, (10, 95), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
     cv2.putText(frame, text7, (10, 115), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
     cv2.putText(frame, text8, (10, 135), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
-    
+    cv2.putText(frame, text9, (10, 155), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
     cv2.putText(frame, text10, (300, 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
     cv2.putText(frame, text11, (300, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 255), 2)
     
