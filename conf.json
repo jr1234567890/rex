@@ -19,7 +19,7 @@
 	"xprocessing_width":100,
 	"x_crop": 0,
 	"y_crop": 0,
-	"processing_width": 600,  
+	"processing_width": 800,  
 	"DNN_width":300,
 	"DNN_height":300,
 	"camera_fov": 120,

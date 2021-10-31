@@ -90,7 +90,7 @@ class FrameCapture:
                     #this is the RPi
                     print ("FrameGrabber: Starting video capture for RPi")
                     self.myframe = cv2.VideoCapture(0)  #this works for RPi
-
+                    self.myframe.set(cv2.CAP_PROP_FOURCC,cv2.VideoWriter_fourcc('M','J','P','G'))
             else:
                 #this is Windows
                 print ("FrameGrabber: Starting video capture for Windows PC")
