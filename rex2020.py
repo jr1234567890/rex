@@ -822,7 +822,10 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
         framemetric==999
     text8=  "Frame Capture (Hz)  {:03.0f}".format(int(1/(framemetric+0.001)))
     #print (commandecho[-4:])
-    text9=  "Servo Current (A) "+ (commandecho[-4:]) #the last 4 characters is the current used by the servos
+    if conf["arduino"]==True:
+        text9=  "Servo Current (A) "+ (commandecho[-4:]) #the last 4 characters is the current used by the servos
+    else:
+        text9= "Ardunio not connected"
 
     # convert time stampes to individual durations
    

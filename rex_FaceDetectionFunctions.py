@@ -66,7 +66,7 @@ class DetectFaces:
         #Changing the blob values can get better results with smaller faces (further away)
 
         #original from his example
-        #blob = cv2.dnn.blobFromImage(cv2.resize(frame, (300, 300)), 1.0, (300,300),(104.0,177.0,123.0))    
+        blob = cv2.dnn.blobFromImage(cv2.resize(frame, (300, 300)), 1.0, (300,300),(104.0,177.0,123.0))    
         
         #this worked, but did not detect small faces.
         #blob = cv2.dnn.blobFromImage(cv2.resize(frame, (800, 600)), 1.0, (300,300),(104.0,177.0,123.0))   
@@ -75,7 +75,7 @@ class DetectFaces:
         #blob = cv2.dnn.blobFromImage(cv2.resize(frame, (800, 600)), 1.0, (800,600),(104.0,177.0,123.0))   
         
         #modified per the comment
-        blob = cv2.dnn.blobFromImage(cv2.resize(frame, (400, 400)), 1.0, (400,400),(104.0,117.0,123.0))    
+        #blob = cv2.dnn.blobFromImage(cv2.resize(frame, (400, 400)), 1.0, (400,400),(104.0,117.0,123.0))    
         self.net.setInput(blob)
 
         #run the detectcor
