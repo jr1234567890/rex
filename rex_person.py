@@ -784,6 +784,11 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     if tilt_servo> 90+conf["max_tilt"]: tilt_servo=90+conf["max_tilt"]
     if tilt_servo< 90-conf["max_tilt"]: tilt_servo=90-conf["max_tilt"]
 
+
+    ################### FOR PERSON DETECTION VERSION ONLY #####################
+    tilt_servo=90
+    mouth_pos=90
+
     #12/13/20  replace with numpy clip function to make sure servos don't exceed limits
     #1/10/21, np.clip is throwing an error.  put the manual if statements back in, above
     #pointx=np.clip(pointx,x_min,x+max)

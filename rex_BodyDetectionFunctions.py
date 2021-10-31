@@ -101,7 +101,7 @@ class DetectBody:
                 #get the index of the label, and then see if it is a person
                 idx = int(detections[0, 0, i, 1])
                 if (self.labels[idx]=="person"):
-                    print ("person")
+                    #print ("person")
                     box=detections[0,0,i,3:7] * np.array([w, h, w, h]) # creates box corners from 3,4,5,6. scaled up by original w and h
                     (startx,starty,endx,endy) = box.astype("int") #converts to integers
  
