@@ -8,7 +8,7 @@
 	"webcam_ID": 1,
 	"camera_warmup_time": 2,
 	"delta_thresh": 30,
-	"bresolution": [640,480],
+	"dresolution": [640,480],
 	"cresolution": [800,600],
 	"xresolution": [1440,1080],
 	"zresolution": [1280,1024],

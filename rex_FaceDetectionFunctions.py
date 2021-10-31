@@ -1,6 +1,5 @@
-#This class pulls video frames from the camera, scales, crops and processes fisheye compensation and provides the latest frame on demand
-#This also sends frames to the cascade threads so they always have the latest
-
+#This function detects human bodies in an image frame.
+#It uses the Intel processing stick if running on a Raspbery Pi
 
 #This is meant to run in a separate thread, to provide more CPU power to the main thread
 
