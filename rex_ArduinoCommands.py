@@ -33,29 +33,32 @@ class RexCommand:
         conf = json.load(open("conf.json"))
         self.skipflag=0
         self.waitingForReply=0
+        self.arduinoResponseString=" "
+        self.arduinoString="Jeff"
+        self.updateFlag=False
+        self.stopped=False
 
+                            #this is from trex_test3.py
+                            # #find com port with the text "Arduino" in the port description
+                            # arduino_ports = [
+                            #     p.device
+                            #     for p in serial.tools.list_ports.comports()
+                            # 	#for windows
+                            #     #if 'COM' in p.description  # may need tweaking to match new arduinos
+                            # 	#for linux
+                            # 	if 'Arduino' in p.description  # may need tweaking to match new arduinos
+                            # ]
+                            # #print(arduino_ports)
 
-#this is from trex_test3.py
-# #find com port with the text "Arduino" in the port description
-# arduino_ports = [
-#     p.device
-#     for p in serial.tools.list_ports.comports()
-# 	#for windows
-#     #if 'COM' in p.description  # may need tweaking to match new arduinos
-# 	#for linux
-# 	if 'Arduino' in p.description  # may need tweaking to match new arduinos
-# ]
-# #print(arduino_ports)
+                            # if not arduino_ports:
+                            #     raise IOError("No Arduino found")
+                            # if len(arduino_ports) > 1:
+                            #     warnings.warn('Multiple Arduinos found - using the first')
 
-# if not arduino_ports:
-#     raise IOError("No Arduino found")
-# if len(arduino_ports) > 1:
-#     warnings.warn('Multiple Arduinos found - using the first')
-
-# #connect to Arduino 	9200, 2880, 2840, 57600, 115200
-# baudRate = 57600
-# ser = serial.Serial(arduino_ports[0],baudRate)
-# print ("Serial port " + arduino_ports[0] + " opened  Baudrate " + str(baudRate))
+                            # #connect to Arduino 	9200, 2880, 2840, 57600, 115200
+                            # baudRate = 57600
+                            # ser = serial.Serial(arduino_ports[0],baudRate)
+                            # print ("Serial port " + arduino_ports[0] + " opened  Baudrate " + str(baudRate))
 
         if (platform.system()=="Linux"):  #see if it's Linux
         #if conf["linux"]==True:
@@ -75,33 +78,65 @@ class RexCommand:
         self.x_max = conf["sx_max"]  # right
         self.y_min = conf["sy_min"]  # down
         self.y_max = conf["sy_max"]  # up
-      
 
+        print("Arduino Comm Thread starting")   #launch a thread that loops in the background
+        t1=Thread(target=self.run, args=()).start()
+      
     def update(self,x,y,jaw,eye,tilt):
          # write the servo value to the arduino.
         # data format for serial interface to arduino is "SERVO5" and 5 integers: 
             #x, y, mouth, eye on/off command and head tilt
-        
+        #print("Function received from program", x,y,jaw,eye,tilt)
+        #ser=self.ser
+
+        self.arduinoString= "<SERVO5," + str(x) + "," + str(y) + "," + str(jaw) + "," + str(eye) + "," + str(tilt) + ">"
+        #print ("command string in the function update call", self.arduinoString)
+
+        self.updateFlag=True
+        return(0)
+
+
+    def run (self):  #run this thread, and send data to the arduino if new data has arrived
+        #print("Starting the run thread")
         ser=self.ser
 
-        arduino_string= "<SERVO5," + str(x) + "," + str(y) + "," + str(jaw) + "," + str(eye) + "," + str(tilt) + ">"
+        while True:  #loop indefinitely
+            #self.updateFlag=True
+            if self.updateFlag==True:
+                #print ("command string in run function", self.arduinoString)
+                self.updateFlag=False  #reset the flag
+                #skip the serial write if the arduino is not connected, skipflag==1
+                if self.skipflag==0:
+                    if self.waitingForReply == False:     #send the string
+                        sendToArduino(ser, self.arduinoString)
+                 #       print ("Sending to arduino", self.arduinoString)
+                        self.waitingForReply = True
 
-        #skip the serial write if the arduino is not connected, skipflag==1
-        if self.skipflag==0:
-            if self.waitingForReply == False:
-                sendToArduino(ser, arduino_string)
-                # print ("Sent from PC - " + arduino_string )
-                self.waitingForReply = True
+                    if self.waitingForReply == True:  #wait for a response
+                        while ser.inWaiting() == 0:
+                            pass  
+                        self.arduinoResponseString = recvFromArduino(ser)
+                        #print("received from arduino  ", self.arduinoResponseString)
+                        self. waitingForReply = False
+                        
+                else:  #else this is a test config without an arduino present, and we just wrap the input
+                    self.arduinoResponseString = self.arduinoString
+            
+                # return the echo from the arduino
+                #print  (dataRecvd)
+            
+                if self.stopped:  #check to see if the stop flag has been set
+                    print ("Arduino command Thread stopping")
+                    return                              
+ 
 
-            if self.waitingForReply == True:
-                while ser.inWaiting() == 0:
-                    pass  
-                dataRecvd = recvFromArduino(ser)
-                #print ("Reply Received  " , dataRecvd)
-                self. waitingForReply = False
-        else:  #else this is a test config without an arduino present, and we just wrap the input
-            dataRecvd = arduino_string
-      
-        # return the echo from the arduino
-        #print  (dataRecvd)
-        return (dataRecvd)
+	# a function to identify when there are new detection results
+    def get_response(self):
+        #print("trying to send", self.arduinoResponseString)
+        return self.arduinoResponseString
+
+    def stop(self):
+        # indicate that the thread should be stopped
+        #print("setting arduino stop command to True")
+        self.stopped = True
+

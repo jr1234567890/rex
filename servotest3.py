@@ -51,7 +51,7 @@ mytime=0
 
 while(True):  
 
-#    sleep(0.004)
+    sleep(1)
     mytime=time.time()-starttime
     if (mytime>3) : pointx=xmax
     if (mytime>6) : pointx=xmin
@@ -75,16 +75,23 @@ while(True):
     # skip this if the arduino skip flag is set
 
     #print((str(mytime)[:4]),pointx, pointy, mouth_pos, eye_cmd,eye_angle)  
+    success=1
     if(skipflag==0):
-        commandecho=myRexCommand.update(pointx, pointy, mouth_pos, eye_cmd,eye_angle)    
+
+        success=myRexCommand.update(pointx, pointy, mouth_pos, eye_cmd,eye_angle)  
+        print ("sending to comm function",pointx, pointy, mouth_pos, eye_cmd,eye_angle)  
+        commandecho=myRexCommand.get_response()  #this may not be the absolute latest, due to comms processing time
+        print ("recieved from comm function ", commandecho)
+        #commandecho=myRexCommand.update(pointx, pointy, mouth_pos, eye_cmd,eye_angle)    
         #print(tilt_servo) 
     #DEBUG
-        print(commandecho)
+       # print("success, command echo", success, commandecho)
 
 ##########          End While(True) loop      ###############
     
 # shutdown and cleanup
 print ("shutting down")
+myRexCommand.stop()
 
 
 

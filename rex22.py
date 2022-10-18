@@ -398,7 +398,16 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
         # reset the num_hits for that object to lower its interest, and reset the clock
         # also, determine if this is a new selected object
 
-    if time.time()-servo_start_time > servo_dwell_time:
+    still_there=False                #added this section 10/18/22
+    for objectID in current_list:
+        if objectID==last_selected_object:
+            still_there=True
+    #print (still_there)
+
+    #Update the selection
+        #if the dwell time timer has expired (servo_dwell_time)
+        #or if the last selected objectd has disappeared (still_there=False)
+    if (time.time()-servo_start_time > servo_dwell_time) or still_there==False:
         # pick the highest interest object
         highest = 0
         for objectID in current_list:
@@ -458,9 +467,8 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
         #get the image chip of the face in the full frame
         (startX, startY, endX, endY) = (int(l/scale),int(t/scale),int(r/scale),int(b/scale))
         face = fullframe[startY:endY, startX:endX]
-        #cv2.imshow("full frametarget", face)
-        #cv2.imshow("full frame", fullframe)
- 
+        #cv2.imshow("face", face)
+         
         ###################    Face Landmarks  ############################
 
         #run the dlib face landmark process, and covert dlib format back to numpy format
@@ -649,7 +657,14 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     # convert to angle based on FOV of the camera, from the center of the camera
     servo_x2 = servo_x1*x_fov/proc_w
     servo_x3 = servo_x2*sx_scale       # convert to servo angle
-    pointx = int(servo_x3 + sx_center)  # add offset for the servo center position
+    
+    #use conf file value to flip what Rex thinks is left vs right
+    if conf["flip_x_servo_diretion"]==True:
+        x_dir=-1
+    else:
+        x_dir=1
+
+    pointx = int(x_dir *servo_x3 + sx_center)  # add offset for the servo center position
 
     servo_y1=-(servo_y-proc_h/2)
     servo_y2=servo_y1*y_fov/proc_h
@@ -791,14 +806,12 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     #print  (pointx, pointy, mouth_pos, eye_cmd,tilt_servo,max_servo_slew)  
     #print  (pointx, pointy, mouth_pos, eye_cmd,tilt_servo)  
 
-
+    arduinotime=time.time()
     servotime=time.time()
     if(skipflag==0):
-     
-
-
-
-        commandecho=myRexCommand.update(pointx, pointy, mouth_pos, eye_cmd,tilt_servo)    
+        success=myRexCommand.update(pointx, pointy, mouth_pos, eye_cmd,tilt_servo)  
+        commandecho=myRexCommand.get_response()  #this may not be the absolute latest, due to comms processing time
+        arduinotime=time.time()-arduinotime  
     #DEBUG
     #    print(pointx, pointy, mouth_pos, eye_cmd,tilt_servo,commandecho)
 
@@ -816,7 +829,7 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
     text4 = "Palm Detector(ms)  {:03.0f} ".format(palmproctime*1000)  
     text5 = "Hands             {:03.1f}".format(num_palms)
     text6=  "Eye angle         {:03.1f}".format(eye_angle)
-    text7=  "Face ID time (ms)  {:03.0f}".format(facerecognitiontime*1000)
+    text7=  "Arduino Time (ms)  {:03.0f}".format(arduinotime*1000)
     framemetric= myFrameCapture.getCaptureTime()
     if (framemetric==0):
         framemetric==999
@@ -918,18 +931,11 @@ while(True):  # replace with some kind of test to see if WebcamStream is still a
 
     # if there are detections, display the face box and other graphics
     if(len(current_list)>0):
-        # show the selected box in a different color
-        #cv2.rectangle(frame, (start_x[selected_object], start_y[selected_object]), (end_x[selected_object], end_y[selected_object]), (255,0,255), 1)
-
-        #display the face landmarks on the selected face
-        #for (x, y) in shape:
-        #    cv2.circle(frame, (x, y), 1, (0, 0, 255), -1)
-
         #display the line between the eyes
-        thickness=4
+        #thickness=4
         #print("drawing right eye ", rightEyeCenter, leftEyeCenter)
         #the raw points are in the fullframe scale, and have to be adjusted to the working frame size
-        cv2.line(frame, (int(rightEyeCenter[0]*scale),int(rightEyeCenter[1]*scale)),(int(leftEyeCenter[0]*scale),int(leftEyeCenter[1]*scale)),(255,255,0) , 1) 
+        cv2.line(frame, (int(rightEyeCenter[0]*scale),int(rightEyeCenter[1]*scale)),(int(leftEyeCenter[0]*scale),int(leftEyeCenter[1]*scale)),(255,255,0) , 3) 
         
         #display the recognition ID
         if conf["enable_face_ID"]:
@@ -984,6 +990,7 @@ cv2.destroyAllWindows
 # stop the threads
 myPalmDetector.stop()
 myFrameCapture.stop()
+myRexCommand.stop()
 #myPlayAudio.stop()
 
 #reset head to neutral position

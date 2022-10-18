@@ -11,8 +11,10 @@ class PalmCascade:
 		# include the stopped variable used to test if the thread should be stopped
 
 		self.palm_cascade = cv2.CascadeClassifier('palm_v4.xml')
-		#self.face_cascade = cv2.CascadeClassifier('palm_v4.xml')
-		
+
+		#10/4/22  This fist cascade worked pretty well
+		#self.palm_cascade = cv2.CascadeClassifier('fist_v3.xml')
+				
 		self.stopped = False
 		self.frame=dummyframe
 		self.rects=[]

@@ -121,8 +121,8 @@ int pulse_length=125;  //pulse length to trigger FX audio player
 
 //parameters for controlling slew rate of servos
 float servorate=.02;  //this is the ratio of the movement we allow with each loop. 
-int servodelay=5;  //milliseconds for the loop delay
-int max_servo_slew=50;  // max servo motion rate, degreees/sec
+int servodelay=3;  //milliseconds for the loop delay  //was 5 on 17 oct22
+int max_servo_slew=70;  // max servo motion rate, degreees/sec   //was 50 on 17 oct22
 int max_horiz_servo_slew=30;  //use a slower slew for left/right slew
 float servo_step;
 float horiz_servo_step;
@@ -355,7 +355,8 @@ void updateServoPos() {
       Servo4Pos=Servo4Pos+(servo_diff/abs(servo_diff))*servo_step;
       //MyServo1.write(int(Servo4Pos));  
     }
-    MyServo4.write(int(Servo4Pos));  
+
+    MyServo4.write(int(servo4));  
     
 
   if(eye_cmd==1){digitalWrite(eyes, HIGH);}

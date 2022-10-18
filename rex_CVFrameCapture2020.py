@@ -224,24 +224,24 @@ class FrameCapture:
             #get the next frame
 
             (self.grabbed, self.framefull) = self.myframe.read()
+            rawheight, rawwidth, channels = self.framefull.shape  #this is the shape of the  image
 
             #crop it
-            self.framefull = self.framefull[self.ycrop:self.fullheight-self.ycrop, self.xcrop:self.fullwidth-self.xcrop]
+            self.framefull = self.framefull[self.ycrop:rawheight-self.ycrop, self.xcrop:rawwidth-self.xcrop]
 
             #scale it
             #self.frame = cv2.resize(self.framefull, (500, 375))
             self.frame = cv2.resize(self.framefull, (int(self.proc_w), int(self.proc_h)))
+
+            # 180 deg rotation using cv2.flip
+            if (self.flip):
+                self.frame = cv2.flip(self.frame, 1)
             
             #make a small grayframe to speed up some recognizers
             temp2 = cv2.resize(self.frame, (int(self.proc_w/2), int(self.proc_h/2)))
             #temp2 = cv2.resize(self.frame, (320,240))
             self.framesmall = cv2.cvtColor(temp2, cv2.COLOR_BGR2GRAY)
-     
-            # 180 deg rotation using cv2.flip
-            if (self.flip):
-                frame = cv2.flip(myframe, -1)
-
-          
+              
             # # apply fisheye undistort mapping
             #     if (self.fisheye):
             #         print("applying fisheye")
