@@ -39,7 +39,7 @@
 	"flip_x_servo_diretion": true,
 	"face_dwell":5,
 	"hands_for_roar": 2,
-	"hands_for_special_roar": 3,
+	"hands_for_special_roar": 4,
 	"start_sound": "aud_Cat-purring-sound-4-sec.wav",
 	"trex_roar":"aud_trex_roar.wav",
 	"trex_special_roar":"aud_barney.wav",
